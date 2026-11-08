@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mappa Zaino</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#07090c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zaino">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@600;700&display=swap">
+<style>
+/* Layout: mappa della borsa a tutto schermo su griglia da progetto. Disegno modificabile sotto, segnalini azzurri con icona sopra, carico in alto, schede dal basso. */
+:root {
+  --bg: #07090c;
+  --surface: #11161c;
+  --surface2: #181f28;
+  --surface3: #202935;
+  --line: #2b3541;
+  --fg: #e9eef5;
+  --muted: #8794a5;
+  --dot: #3db8ff;
+  --dot-ink: #031521;
+  --ok: #35d07f;
+  --warn: #f3c24f;
+  --danger: #ff6b6b;
+  --grid: rgba(120, 165, 210, .07);
+  --stage1: #101821;
+  --stage2: #080b0f;
+  --stage-line: #17202a;
+  --bag-body: #181f28;
+  --bag-part: #202935;
+  --bag-open: #0b0f14;
+  --bag-handle: #4f5b6c;
+  --bag-zip: #5d6b7e;
+  --bag-stroke: #3f4752;
+  --bag-shadow: #000;
+  --lbl: #c9d3df;
+  --lbl-halo: #080b0f;
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eef1f5; --surface: #ffffff; --surface2: #f2f5f8; --surface3: #e4e9f0; --line: #ccd4df;
+    --fg: #101722; --muted: #566377; --dot: #0b86d6; --dot-ink: #ffffff;
+    --ok: #17924f; --warn: #946000; --danger: #cc2f2f;
+    --grid: rgba(20, 60, 110, .08); --stage1: #fafcfe; --stage2: #e5eaf0; --stage-line: #d3dae4;
+    --bag-body: #c5cdd8; --bag-part: #dbe1e9; --bag-open: #98a4b4; --bag-handle: #7f8c9e; --bag-zip: #738094; --bag-stroke: #8896a8; --bag-shadow: #1d2a3a;
+    --lbl: #1d2733; --lbl-halo: #eef1f5;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eef1f5; --surface: #ffffff; --surface2: #f2f5f8; --surface3: #e4e9f0; --line: #ccd4df;
+  --fg: #101722; --muted: #566377; --dot: #0b86d6; --dot-ink: #ffffff;
+  --ok: #17924f; --warn: #946000; --danger: #cc2f2f;
+  --grid: rgba(20, 60, 110, .08); --stage1: #fafcfe; --stage2: #e5eaf0; --stage-line: #d3dae4;
+  --bag-body: #c5cdd8; --bag-part: #dbe1e9; --bag-open: #98a4b4; --bag-handle: #7f8c9e; --bag-zip: #738094; --bag-stroke: #8896a8; --bag-shadow: #1d2a3a;
+  --lbl: #1d2733; --lbl-halo: #eef1f5;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--dot); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+#app { height: 100%; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; flex: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; font-weight: 500; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--dot); border-color: var(--dot); color: var(--dot-ink); font-weight: 700; box-shadow: 0 0 18px -4px var(--dot); }
+.chip.plus { padding: 8px 13px; color: var(--dot); position: sticky; right: 0; margin-left: auto; background: var(--surface); box-shadow: -10px 0 8px -4px var(--bg); }
+.chips, .alerts, .addrow, .iconpick, .sug { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; cursor: grab; }
+
+.alerts { flex: none; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.alerts::-webkit-scrollbar { display: none; }
+.pill { flex: none; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.pill.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.pill.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.pill.ghost { color: var(--muted); }
+.pill.ghost::before { display: none; }
+
+.load { flex: none; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 9px 12px 11px; display: flex; flex-direction: column; gap: 7px; }
+.ltop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.lk { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.lv { font: 700 17px var(--font-display); font-variant-numeric: tabular-nums; }
+.lv small { font: 500 13px var(--font-body); color: var(--muted); }
+.bar { height: 7px; border-radius: 99px; background: var(--surface3); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--dot), color-mix(in srgb, var(--dot) 55%, #8fe3ff)); }
+.load.warn .bar i, .bar.warn i { background: var(--warn); }
+.load.over .bar i, .bar.over i { background: var(--danger); }
+.load.over .lv { color: var(--danger); }
+
+.tabs { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-radius: 12px; padding: 4px; gap: 4px; }
+.tab { border: 0; background: transparent; color: var(--muted); padding: 8px 4px; border-radius: 9px; font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--surface3); color: var(--fg); font-weight: 700; }
+
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.stage { position: relative; flex: 1; min-height: 190px; border-radius: 20px; border: 1px solid var(--stage-line); overflow: hidden;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(120% 90% at 50% 0%, var(--stage1), var(--stage2) 72%); }
+#svgHost { position: absolute; inset: 0; }
+#mapSvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.edit #svgHost { touch-action: none; -webkit-user-select: none; user-select: none; }
+.d-body { fill: var(--bag-body); stroke: var(--bag-stroke); }
+.d-part { fill: var(--bag-part); stroke: var(--bag-stroke); }
+.d-open { fill: var(--bag-open); stroke: var(--bag-stroke); }
+.d-handle { stroke: var(--bag-handle); }
+.d-zip { stroke: var(--bag-zip); }
+.d-zipfill { fill: var(--bag-zip); }
+.d-stitch { stroke: var(--bag-stroke); }
+.zone { cursor: pointer; }
+.zone.ghost { opacity: .28; pointer-events: none; }
+.dot { fill: var(--dot); stroke: color-mix(in srgb, var(--dot) 60%, #fff); stroke-width: 1.5; }
+.zone.out .dot { stroke: var(--warn); stroke-width: 3; }
+.ico * { fill: none; stroke: var(--dot-ink); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.cnt { fill: var(--dot-ink); font: 700 14px var(--font-display); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.badge { fill: var(--bg); stroke: var(--dot); stroke-width: 1.5; }
+.badge-t { fill: var(--fg); font: 700 9.5px var(--font-body); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.flag { fill: var(--danger); stroke: var(--bg); stroke-width: 2; }
+.lbl { fill: var(--lbl); font: 500 10.5px var(--font-body); text-anchor: middle; paint-order: stroke; stroke: var(--lbl-halo); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.pulse { fill: none; stroke: var(--warn); stroke-width: 2; opacity: 0; }
+.placing .zone { opacity: .45; }
+.placing #mapSvg { cursor: crosshair; }
+.placing [data-sel] { cursor: pointer; }
+.selbox { fill: none; stroke: var(--dot); stroke-width: 1.5; stroke-dasharray: 5 4; pointer-events: none; }
+.hnd { fill: var(--dot); stroke: var(--bg); stroke-width: 2; }
+.hint { position: absolute; left: 10px; right: 10px; top: 10px; z-index: 2; display: flex; align-items: center; gap: 10px; background: var(--surface3); border: 1px solid var(--dot); border-radius: 12px; padding: 8px 10px 8px 14px; font-weight: 500; }
+.hint button { margin-left: auto; flex: none; }
+.fab { position: absolute; bottom: 12px; z-index: 2; border: 1px solid var(--dot); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--dot); border-radius: 999px; padding: 10px 16px; font-weight: 700; backdrop-filter: blur(6px); }
+#addZone { right: 12px; box-shadow: 0 0 22px -6px var(--dot); }
+#editDraw { left: 12px; border-color: var(--line); color: var(--fg); font-weight: 500; }
+.note { flex: none; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; color: var(--muted); font-size: 13px; }
+.link { border: 0; background: none; color: var(--dot); padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+
+#editPanel { flex: none; max-height: 40svh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.ehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ehead strong { font: 700 15px var(--font-display); }
+.addrow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.addrow::-webkit-scrollbar { display: none; }
+.addrow .btn { flex: none; }
+.etitle { font-weight: 700; color: var(--dot); }
+.swrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); padding: 0; flex: none; position: relative; overflow: hidden; }
+.sw[aria-pressed="true"] { border-color: var(--dot); box-shadow: 0 0 0 2px var(--bg) inset; }
+.sw.auto { background: repeating-linear-gradient(45deg, var(--surface3) 0 4px, var(--surface) 4px 8px); }
+.sw input { position: absolute; inset: -6px; width: 44px; height: 44px; opacity: 0; cursor: pointer; }
+.sw.custom { background: conic-gradient(#e05a5a, #e0c25a, #5ae07a, #5ab8e0, #8a5ae0, #e05a5a); }
+.rng { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.rng input { width: 100%; accent-color: var(--dot); }
+.tgls { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.chk { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.chk input { width: 20px; height: 20px; accent-color: var(--dot); }
+
+.nav { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--stage-line); padding: 6px 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+.nbtn { border: 0; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; font-size: 12px; font-weight: 500; }
+.nbtn[aria-current="page"] { color: var(--dot); font-weight: 700; }
+.nbtn svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+h2 { margin: 4px 0 0; font: 700 22px var(--font-display); }
+.field { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 16px; }
+.field.sm { padding: 9px 12px; }
+.field::placeholder { color: var(--muted); opacity: .7; }
+.row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.row.go { width: 100%; text-align: left; }
+.row.wrap { flex-wrap: wrap; }
+.row .grow { flex: 1; min-width: 160px; }
+.row .t { font-weight: 500; overflow-wrap: anywhere; }
+.row .s { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.row .s.warn { color: var(--warn); }
+.btn { border: 1px solid var(--line); background: var(--surface2); border-radius: 10px; padding: 8px 12px; font-weight: 500; }
+.btn.primary { background: var(--dot); border-color: var(--dot); color: var(--dot-ink); font-weight: 700; }
+.btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.btn.sm { padding: 6px 10px; font-size: 13px; }
+.bagname { background: transparent; border: 0; font-weight: 700; font-size: 16px; padding: 4px 0; width: 100%; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.card h3 { margin: 0; font: 700 16px var(--font-display); }
+.tpls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tpl { border: 1px solid var(--line); background: var(--surface2); border-radius: 12px; padding: 10px; font-weight: 500; }
+.tpl[aria-pressed="true"] { border-color: var(--dot); color: var(--dot); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 9px; padding: 8px; color: var(--muted); font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--dot); color: var(--dot-ink); font-weight: 700; }
+.empty { color: var(--muted); padding: 20px 4px; text-align: center; }
+
+.prep-top { display: flex; flex-direction: column; gap: 8px; }
+.prog { display: flex; align-items: center; gap: 10px; }
+.prog .bar { flex: 1; }
+.prog b { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); font-weight: 500; }
+.plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.prow { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; }
+.prow .grow { flex: 1; min-width: 0; }
+.prow.done .t { color: var(--muted); text-decoration: line-through; }
+.locb { display: inline-block; margin-top: 2px; border: 0; background: none; padding: 0; font-size: 13px; color: var(--dot); text-align: left; overflow-wrap: anywhere; }
+.locb.add { color: var(--warn); }
+.locb.out { color: var(--warn); }
+
+#scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .6); z-index: 20; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 520px; max-height: 88%; z-index: 21; display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 24px 24px 0 0; padding: 10px max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -20px 50px -20px rgba(0, 0, 0, .5); }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 2px; flex: none; }
+.shead { display: flex; align-items: center; gap: 8px; flex: none; }
+.shead strong { flex: 1; font: 700 18px var(--font-display); }
+#zoneName { flex: 1; min-width: 0; background: transparent; border: 0; border-bottom: 1px dashed var(--line); font: 700 20px var(--font-display); padding: 4px 0; }
+.x { border: 0; background: var(--surface3); width: 36px; height: 36px; border-radius: 50%; font-size: 20px; line-height: 1; color: var(--muted); flex: none; }
+.icobtn { flex: none; width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--line); background: var(--dot); color: var(--dot-ink); display: grid; place-items: center; font: 700 14px var(--font-display); padding: 0; }
+.icobtn svg, .ib svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.iconpick { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; flex: none; }
+.iconpick::-webkit-scrollbar { display: none; }
+.ib { flex: none; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2); color: var(--fg); display: grid; place-items: center; padding: 0; font-weight: 700; font-size: 13px; }
+.ib[aria-pressed="true"] { border-color: var(--dot); color: var(--dot); background: color-mix(in srgb, var(--dot) 14%, var(--surface2)); }
+.sub { margin: 0; color: var(--muted); font-size: 13px; flex: none; }
+#itemList { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 56px; flex: 0 1 auto; display: flex; flex-direction: column; gap: 6px; }
+.item { background: var(--surface2); border-radius: 12px; }
+.item.drag { outline: 2px solid var(--dot); background: var(--surface3); }
+.irow { display: flex; align-items: center; gap: 10px; padding: 8px 6px 8px 10px; }
+.itx { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 2px 0; display: flex; flex-direction: column; gap: 3px; }
+.itx .n { overflow-wrap: anywhere; }
+.item.out .n { color: var(--muted); }
+.st { font-size: 12px; color: var(--warn); }
+.mcs { display: flex; flex-wrap: wrap; gap: 4px; }
+.mcs:empty { display: none; }
+.mc { font-size: 11.5px; padding: 1px 8px; border-radius: 99px; background: var(--surface3); color: var(--muted); font-variant-numeric: tabular-nums; }
+.mc.soon, .mc.low { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.mc.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.mn { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; font-style: italic; }
+.tick { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); background: transparent; display: grid; place-items: center; padding: 0; }
+.tick svg { width: 16px; height: 16px; stroke: #04140c; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.tick[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); }
+.tick[aria-pressed="true"] svg { opacity: 1; }
+.grip { flex: none; width: 34px; height: 34px; display: grid; place-items: center; color: var(--muted); touch-action: none; cursor: grab; border-radius: 8px; }
+.grip svg { width: 18px; height: 18px; fill: currentColor; }
+.del { flex: none; border: 0; background: none; color: var(--muted); width: 32px; height: 32px; font-size: 18px; }
+.ied { display: flex; flex-direction: column; gap: 10px; padding: 4px 12px 12px; border-top: 1px solid var(--line); }
+.ied label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
+.ied label.chk { flex-direction: row; font-size: 14px; }
+.ied .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ied .field { padding: 9px 11px; }
+.step { display: flex; align-items: stretch; gap: 6px; }
+.step .field { text-align: center; min-width: 0; }
+.step button { flex: none; width: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 18px; }
+#addForm { display: flex; gap: 8px; flex: none; }
+#addForm .field { flex: 1; min-width: 0; }
+.sfoot { display: flex; gap: 8px; flex-wrap: wrap; flex: none; }
+.tiny { color: var(--muted); font-size: 12px; margin: 0; flex: none; }
+
+.big { font: 700 30px var(--font-display); font-variant-numeric: tabular-nums; }
+.big small { font: 500 15px var(--font-body); color: var(--muted); }
+.limrow { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+.limrow .field { width: 96px; padding: 8px 10px; text-align: center; }
+.msg { margin: 0; font-size: 14px; }
+.msg.over { color: var(--danger); }
+.msg.warn { color: var(--warn); }
+.brk { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
+.brk button { width: 100%; text-align: left; background: var(--surface2); border: 0; border-radius: 12px; padding: 9px 12px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.brk .bar { grid-column: 1 / -1; height: 5px; }
+.brk b { font-variant-numeric: tabular-nums; font-weight: 500; color: var(--muted); font-size: 13px; }
+textarea.field { min-height: 150px; resize: vertical; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.45; }
+.pickl { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
+.pickl button { text-align: left; background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+.pickl small { color: var(--muted); display: block; font-size: 12px; }
+
+.zone.crit .dot { stroke: var(--danger); stroke-width: 3; }
+.zone.crit .pulse { stroke: var(--danger); }
+.guide { stroke: #ff5ec4; stroke-width: 1; stroke-dasharray: 4 3; pointer-events: none; }
+.axis { stroke: var(--dot); stroke-width: 1; stroke-dasharray: 2 5; opacity: .55; pointer-events: none; }
+.egrid { stroke: var(--dot); stroke-width: .5; opacity: .2; }
+.shotbtn { top: 10px; bottom: auto; right: 10px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.mc.ess { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.item.crit { box-shadow: inset 3px 0 0 var(--danger); }
+.item.crit .n { color: var(--danger); }
+.sug { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.sug::-webkit-scrollbar { display: none; }
+.sug button { flex: none; border: 1px dashed var(--line); background: transparent; border-radius: 99px; padding: 5px 11px; font-size: 13px; color: var(--muted); }
+.stylewrap { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.stylerow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mcol { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); padding: 0; flex: none; }
+.mcol[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
+.qs { display: flex; flex-direction: column; gap: 4px; border-radius: 18px; padding: 16px; border: 1px solid var(--line); background: var(--surface); }
+.qs.ok { border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 9%, var(--surface)); }
+.qs.ok .qn { color: var(--ok); }
+.qs.bad { border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 9%, var(--surface)); }
+.qs.bad .qn { color: var(--danger); }
+.qn { font: 700 26px var(--font-display); }
+.qrow { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.qrow .grow { flex: 1; min-width: 0; }
+.qrow .tick { width: 40px; height: 40px; }
+.qrow .tick svg { width: 22px; height: 22px; }
+.qrow.out { border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.qrow.out .t { color: var(--danger); }
+.star { border: 0; background: none; font-size: 24px; color: var(--muted); width: 38px; height: 38px; line-height: 1; flex: none; }
+.star[aria-pressed="true"] { color: var(--warn); }
+.dash { display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: center; }
+.dash svg { width: 100%; height: auto; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat { background: var(--surface2); border-radius: 12px; padding: 8px 10px; }
+.stat b { display: block; font: 700 18px var(--font-display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.brow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; }
+.brow .bar { grid-column: 1 / -1; height: 5px; }
+.brow b { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.logl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.logl li { display: flex; gap: 8px; align-items: baseline; font-size: 14px; }
+.logl .when { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; padding-left: 8px; }
+.logl .a-out { color: var(--warn); font-weight: 700; font-size: 12px; }
+.logl .a-in { color: var(--ok); font-weight: 700; font-size: 12px; }
+.seg.two { grid-template-columns: repeat(2, 1fr); }
+.imgprev { width: 100%; max-height: 44svh; object-fit: contain; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
+#svgHost { touch-action: none; }
+.d3btn { top: 10px; bottom: auto; left: 10px; right: auto; padding: 6px 12px; font-size: 13px; font-weight: 700; }
+.d3btn[aria-pressed="true"] { background: var(--dot); color: var(--dot-ink); }
+.zoombtn { top: 10px; bottom: auto; left: 64px; right: auto; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.scene { position: absolute; inset: 0; perspective: 1100px; }
+.obj { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+.obj > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.obj .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.obj .slice { filter: brightness(.6); pointer-events: none; }
+.scene.drag .obj { transition: none; }
+#dlg { overflow-y: auto; }
+#dlgQr { background: #fff; border-radius: 12px; padding: 10px; flex: none; }
+#dlgQr svg { display: block; width: min(100%, 240px); height: auto; margin: 0 auto; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pop { 0% { transform: scale(.8); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  .pop .tick { animation: pop .38s cubic-bezier(.2, .9, .3, 1); }
+  @keyframes swap { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+  #svgHost.swap { animation: swap .3s ease-out; }
+  .item, .qrow { transition: background-color .3s, border-color .3s, box-shadow .3s; }
+  .sheet { animation: up .26s cubic-bezier(.2, .9, .3, 1); }
+  @keyframes up { from { transform: translateY(28px); opacity: 0; } }
+  #scrim { animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } }
+  .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2.2s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.2); opacity: 0; } }
+  .bar i { transition: width .5s cubic-bezier(.2, .9, .3, 1); }
+  .zone .dot { transition: r .15s; }
+  .zone:hover .dot { r: 18; }
+  .chip, .tab, .btn, .fab { transition: background-color .15s, border-color .15s, color .15s; }
+}
+</style>
+
+<div id="app">
+  <div class="chips" id="chips"></div>
+  <div class="alerts" id="alerts" hidden></div>
+  <div class="screen" id="scrMap">
+    <button class="load" id="load" aria-label="Dettagli del carico"></button>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="stage" id="stage">
+      <div class="hint" id="hint" hidden><span id="hintText"></span><button class="btn sm" id="cancelPlace">Annulla</button></div>
+      <div id="svgHost"></div>
+      <button class="fab" id="editDraw">Disegna</button>
+      <button class="fab" id="addZone">+ Segnalino</button>
+      <button class="fab shotbtn" id="shotBtn">Immagine</button>
+      <button class="fab d3btn" id="d3Btn" aria-pressed="false" aria-label="Vista 3D">3D</button>
+      <button class="fab zoombtn" id="zoomBtn" hidden>Zoom 1:1</button>
+    </div>
+    <div class="note" id="exNote" hidden><span>Gli oggetti che vedi sono esempi.</span><button class="link" id="clearEx">Svuota esempi</button></div>
+    <div id="editPanel" hidden></div>
+  </div>
+  <div class="screen" id="scrSearch" hidden>
+    <h2>Cerca</h2>
+    <input class="field" id="q" type="search" placeholder="Cosa stai cercando?" autocomplete="off" aria-label="Cerca un oggetto">
+    <div class="sug" id="qSug" hidden></div>
+    <div class="scroll" id="results"></div>
+  </div>
+  <div class="screen" id="scrPrep" hidden>
+    <div class="scroll" id="prepBody"></div>
+  </div>
+  <div class="screen" id="scrEsc" hidden>
+    <div class="scroll" id="escBody"></div>
+  </div>
+  <div class="screen" id="scrBags" hidden>
+    <div class="scroll">
+      <div class="card" id="dashCard"></div>
+      <div class="card" id="logCard"></div>
+      <h2>Le tue borse</h2>
+      <div id="bagList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <form class="card" id="newBag">
+        <h3>Nuova borsa</h3>
+        <input class="field" id="newName" placeholder="Nome (es. Zaino università)" autocomplete="off" aria-label="Nome della nuova borsa">
+        <p class="tiny">Scegli un disegno da cui partire. Poi lo modifichi aggiungendo tasche, cerniere e colori fino a farlo uguale al tuo.</p>
+        <div class="tpls" id="tpls"></div>
+        <button class="btn primary" type="submit">Crea e disegna</button>
+      </form>
+      <div class="card">
+        <h3>Aspetto</h3>
+        <div class="seg" id="themeSeg"></div>
+      </div>
+      <div class="card">
+        <h3>Dati</h3>
+        <p class="tiny">Le borse restano su questo dispositivo, in questo browser. Fai un backup per spostarle su un altro telefono o computer.</p>
+        <div class="acts"><button class="btn" id="btnExport">Esporta backup</button><button class="btn" id="btnImport">Importa backup o codice borsa</button></div>
+      </div>
+      <div class="card" id="pwaCard">
+        <h3>Installa come app</h3>
+        <p class="tiny">iPhone: in Safari tocca Condividi, poi «Aggiungi alla schermata Home». Android: menu ⋮ del browser, poi «Installa app». Dopo la prima apertura funziona anche senza internet.</p>
+        <div class="acts"><button class="btn primary" id="pwaBtn" hidden>Installa</button></div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav" id="nav">
+    <button class="nbtn" data-s="map"><svg viewBox="0 0 24 24"><path d="M7 8a5 5 0 0 1 10 0v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/><path d="M9 14h6M10 3.5V2M14 3.5V2"/></svg>Mappa</button>
+    <button class="nbtn" data-s="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>Cerca</button>
+    <button class="nbtn" data-s="prep"><svg viewBox="0 0 24 24"><path d="m4 6 2 2 3.5-3.5M4 14l2 2 3.5-3.5M13 7h7M13 15h7"/></svg>Prepara</button>
+    <button class="nbtn" data-s="esc"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Esco</button>
+    <button class="nbtn" data-s="bags"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>Borse</button>
+  </nav>
+</div>
+
+<div id="scrim" hidden></div>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Scomparto" hidden>
+  <div class="grab"></div>
+  <div class="shead">
+    <button class="icobtn" id="iconBtn" aria-label="Scegli l'icona"></button>
+    <input id="zoneName" aria-label="Nome dello scomparto" autocomplete="off" maxlength="40">
+    <button class="x" data-close aria-label="Chiudi">×</button>
+  </div>
+  <div class="stylewrap" id="styleWrap" hidden>
+    <div class="iconpick" id="iconPick"></div>
+    <div class="stylerow" id="colorRow"></div>
+    <label class="chk"><input type="checkbox" id="lblToggle"> Mostra il nome sul disegno</label>
+  </div>
+  <p class="sub" id="zoneSub"></p>
+  <ul id="itemList"></ul>
+  <form id="addForm">
+    <input class="field" id="itemInput" placeholder="Aggiungi oggetto" autocomplete="off" enterkeyhint="done" aria-label="Nuovo oggetto" maxlength="200">
+    <button class="btn primary" type="submit">Aggiungi</button>
+  </form>
+  <div class="sug" id="sugRow" hidden></div>
+  <p class="tiny">Più oggetti: separali con la virgola. Quantità e peso al volo: "2x Quaderni 250g".</p>
+  <div class="sfoot">
+    <button class="btn" id="moveDot">Sposta segnalino</button>
+    <button class="btn danger" id="delZone">Elimina segnalino</button>
+  </div>
+</section>
+
+<section class="sheet" id="loadSheet" role="dialog" aria-modal="true" aria-label="Carico" hidden>
+  <div class="grab"></div>
+  <div class="shead"><strong id="lsTitle">Carico</strong><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div id="lsTop" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div class="limrow"><label for="limInput">Limite consigliato</label><input class="field" id="limInput" type="number" inputmode="decimal" min="0.5" max="60" step="0.5"><span>kg</span></div>
+  <ul class="brk" id="lsBrk"></ul>
+</section>
+
+<section class="sheet" id="pickSheet" role="dialog" aria-modal="true" aria-label="Dove lo metti" hidden>
+  <div class="grab"></div>
+  <div class="shead"><strong id="pickTitle">Dove lo metti?</strong><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div class="pickl" id="pickList"></div>
+</section>
+
+<section class="sheet" id="dlg" role="dialog" aria-modal="true" aria-label="Dati" hidden>
+  <div class="grab"></div>
+  <div class="shead"><strong id="dlgTitle"></strong><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <p class="sub" id="dlgSub"></p>
+  <textarea class="field" id="dlgText" spellcheck="false" aria-label="Contenuto"></textarea>
+  <div id="dlgQr" hidden></div>
+  <p class="msg" id="dlgMsg" role="status"></p>
+  <div class="acts" id="dlgActs"></div>
+  <input type="file" id="dlgFile" class="vh" accept=".json,application/json,text/plain" tabindex="-1">
+</section>
+
+<section class="sheet" id="imgSheet" role="dialog" aria-modal="true" aria-label="Salva immagine" hidden>
+  <div class="grab"></div>
+  <div class="shead"><strong>Salva come immagine</strong><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div class="seg two" id="imgScope"></div>
+  <img class="imgprev" id="imgPrev" alt="Anteprima della mappa">
+  <p class="msg" id="imgMsg" role="status"></p>
+  <div class="acts"><button class="btn primary" id="imgPng">Salva PNG</button><button class="btn" id="imgJpg">Salva JPG</button></div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  const KEY = "mappaZaino.v1";
+  const VIEWS = [{ id: "front", name: "Davanti" }, { id: "back", name: "Dietro" }, { id: "open", name: "Aperta" }];
+  const KIND = {
+    pocket: { label: "Tasca", w: 90, h: 80 },
+    strap: { label: "Spallaccio", w: 36, h: 200 },
+    handle: { label: "Manico", w: 100, h: 46 },
+    flap: { label: "Patta", w: 140, h: 70 },
+    zip: { label: "Cerniera", w: 120, h: 0 },
+    oval: { label: "Apertura", w: 120, h: 60 }
+  };
+  const COLORS = ["#20262e", "#4a5360", "#1f3a6b", "#2f6fd0", "#c0392b", "#2e7d4f", "#8a7a52", "#7a4a2b", "#e07b2e", "#d86a9a", "#d9dde3", "#e6c229"];
+  const TPL_LABEL = { zainetto: "Zainetto", borsone: "Borsone", tote: "Borsa a mano", tracolla: "Tracolla", vuota: "Vuota" };
+  const TPL_LIMIT = { zainetto: 8, borsone: 12, tote: 6, tracolla: 5, vuota: 8 };
+  const ICONS = {
+    key: '<circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 7l3 3"/>',
+    laptop: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 20h20"/>',
+    bottle: '<path d="M9.5 2h5M10 2v4l-2 3v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9l-2-3V2M8 13h8"/>',
+    wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1"/>',
+    phone: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+    plug: '<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+    pen: '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    shirt: '<path d="M20.4 5.2 16 3a4 4 0 0 1-8 0L3.6 5.2a1 1 0 0 0-.6 1.1l.8 3.6a1 1 0 0 0 1 .8H7V21h10V10.7h2.2a1 1 0 0 0 1-.8l.8-3.6a1 1 0 0 0-.6-1.1z"/>',
+    shoe: '<path d="M3 15v-3l5-1.5 3-4 4 3 5 1.5V15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM3 19h18"/>',
+    pill: '<path d="m10.5 20.5-7-7a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7zM8.5 8.5l7 7"/>',
+    food: '<path d="M12 7c-1-2-3-3-5-2-3 1-4 5-3 9s3 7 5.5 7c1.2 0 1.5-.5 2.5-.5s1.3.5 2.5.5c2.5 0 4.5-3 5.5-7s0-8-3-9c-2-1-4 0-5 2zM12 7c0-2 1-4 3-5"/>',
+    headphones: '<path d="M3 14v-2a9 9 0 0 1 18 0v2M3 14h3a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2zM21 14h-3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1a2 2 0 0 0 2-2z"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    umbrella: '<path d="M3 12a9 9 0 0 1 18 0zM12 12v7a2 2 0 0 0 4 0"/>',
+    dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/>',
+    health: '<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>'
+  };
+
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const $ = (s) => document.querySelector(s);
+  const num = (v, min, max, d) => { v = parseFloat(v); return isFinite(v) ? Math.min(max, Math.max(min, v)) : d; };
+  const str = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
+  const hexOk = (v) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null);
+  const z2 = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => d.getFullYear() + "-" + z2(d.getMonth() + 1) + "-" + z2(d.getDate());
+  function addDays(n) { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+  function daysLeft(exp) { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(exp + "T00:00:00") - t) / 864e5); }
+  function fmtDate(exp) { try { return new Date(exp + "T00:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short" }); } catch (e) { return exp; } }
+  function fmtW(g) {
+    g = Math.round(g);
+    if (g < 1000) return g + " g";
+    const k = g / 1000;
+    return (Number.isInteger(k) ? String(k) : k.toFixed(1)).replace(".", ",") + " kg";
+  }
+  function fmtKg(k) { return (Number.isInteger(k) ? String(k) : String(k).replace(".", ",")) + " kg"; }
+
+  /* ---------- disegni di base ---------- */
+  function P(k, x, y, w, h, o) { const s = { id: uid(), k, x, y, w, h }; if (o) Object.assign(s, o); return s; }
+  function mkViews(type) {
+    if (type === "zainetto") {
+      const Z = () => ({ x: 60, y: 60, w: 180, h: 332, rt: 60, rb: 30 });
+      return {
+        front: { body: Z(), shapes: [P("handle", 120, 26, 60, 36), P("pocket", 112, 108, 76, 62, { r: 14, name: "Tasca alta" }), P("pocket", 88, 215, 124, 138, { r: 22, zip: true, name: "Tasca frontale" }), P("pocket", 38, 255, 26, 104, { r: 12, name: "Tasca laterale sinistra" }), P("pocket", 236, 255, 26, 104, { r: 12, name: "Tasca laterale destra" }), P("zip", 70, 190, 160, 0)] },
+        back: { body: Z(), shapes: [P("handle", 120, 26, 60, 36), P("pocket", 112, 120, 76, 190, { r: 20, name: "Schienale" }), P("strap", 90, 92, 40, 278, { name: "Spallaccio sx" }), P("strap", 170, 92, 40, 278, { name: "Spallaccio dx" }), P("zip", 70, 380, 160, 0)] },
+        open: { body: Z(), shapes: [P("handle", 120, 26, 60, 36), P("pocket", 80, 92, 140, 282, { r: 24, d: "open", st: false, name: "Scomparto principale" }), P("pocket", 92, 106, 116, 118, { r: 12, name: "Tasca computer" }), P("zip", 92, 262, 116, 0), P("zip", 92, 300, 116, 0), P("zip", 92, 338, 116, 0)] }
+      };
+    }
+    if (type === "borsone") {
+      const B = () => ({ x: 20, y: 150, w: 260, h: 190, rt: 40, rb: 40 });
+      return {
+        front: { body: B(), shapes: [P("handle", 100, 104, 100, 46), P("handle", 118, 122, 64, 28), P("pocket", 22, 215, 54, 102, { r: 14, name: "Tasca laterale sinistra" }), P("pocket", 224, 215, 54, 102, { r: 14, name: "Tasca laterale destra" }), P("pocket", 96, 220, 108, 96, { r: 16, zip: true, name: "Tasca frontale" }), P("zip", 30, 178, 240, 0)] },
+        back: { body: B(), shapes: [P("handle", 100, 104, 100, 46), P("pocket", 62, 200, 176, 112, { r: 18, zip: true, name: "Tasca posteriore" }), P("zip", 30, 178, 240, 0), P("handle", 40, 125, 220, 65, { name: "Tracolla" })] },
+        open: { body: null, shapes: [P("handle", 100, 77, 100, 46), P("oval", 18, 123, 264, 164, { d: "body", name: "Bordo" }), P("oval", 34, 137, 232, 136, { name: "Scomparto principale" }), P("pocket", 36, 168, 58, 68, { r: 12, name: "Scomparto scarpe" }), P("zip", 104, 150, 0, 110)] }
+      };
+    }
+    if (type === "tote") {
+      const T = () => ({ x: 50, y: 120, w: 200, h: 260, rt: 10, rb: 22 });
+      return {
+        front: { body: T(), shapes: [P("handle", 85, 48, 130, 72), P("pocket", 90, 230, 120, 100, { r: 12, zip: true, name: "Tasca frontale" }), P("zip", 50, 160, 200, 0)] },
+        back: { body: T(), shapes: [P("handle", 85, 48, 130, 72), P("pocket", 80, 180, 140, 140, { r: 12, name: "Tasca posteriore" })] },
+        open: { body: T(), shapes: [P("handle", 85, 48, 130, 72), P("pocket", 62, 132, 176, 236, { r: 14, d: "open", st: false, name: "Scomparto principale" }), P("pocket", 76, 146, 70, 60, { r: 10, name: "Tasca interna" })] }
+      };
+    }
+    if (type === "tracolla") {
+      const M = () => ({ x: 40, y: 130, w: 220, h: 200, rt: 16, rb: 24 });
+      return {
+        front: { body: M(), shapes: [P("handle", 40, 60, 220, 70, { name: "Tracolla" }), P("pocket", 70, 250, 160, 60, { r: 12, zip: true, name: "Tasca frontale" }), P("flap", 40, 130, 220, 100, { name: "Patta" }), P("pocket", 135, 205, 30, 28, { r: 6, name: "Fibbia" })] },
+        back: { body: M(), shapes: [P("handle", 40, 60, 220, 70, { name: "Tracolla" }), P("pocket", 60, 170, 180, 120, { r: 14, zip: true, name: "Tasca posteriore" })] },
+        open: { body: M(), shapes: [P("handle", 40, 60, 220, 70, { name: "Tracolla" }), P("pocket", 56, 146, 188, 168, { r: 14, d: "open", st: false, name: "Scomparto principale" }), P("pocket", 68, 160, 164, 60, { r: 10, name: "Tasca interna" })] }
+      };
+    }
+    const E = () => ({ x: 60, y: 60, w: 180, h: 300, rt: 24, rb: 24 });
+    return { front: { body: E(), shapes: [] }, back: { body: E(), shapes: [] }, open: { body: E(), shapes: [] } };
+  }
+  const SEED_ZONES = {
+    zainetto: [["Tasca frontale", "front", 150, 285, "key"], ["Tasca sinistra", "front", 51, 305], ["Tasca destra", "front", 249, 305], ["Tasca alta", "front", 150, 140], ["Spallaccio sx", "back", 111, 250], ["Spallaccio dx", "back", 189, 250], ["Tasca schiena", "back", 150, 190], ["Scomparto principale", "open", 150, 300, "book"], ["Tasca computer", "open", 150, 165, "laptop"]],
+    borsone: [["Tasca sinistra", "front", 48, 265, "bottle"], ["Tasca destra", "front", 252, 265], ["Tasca frontale", "front", 150, 268, "headphones"], ["Tasca posteriore", "back", 150, 255], ["Scomparto principale", "open", 190, 205, "shirt"], ["Scomparto scarpe", "open", 65, 200, "shoe"]]
+  };
+  function mkBag(name, type, withSeed) {
+    const b = { id: uid(), name, type, limit: TPL_LIMIT[type] || 8, views: mkViews(type), zones: [] };
+    if (withSeed) b.zones = SEED_ZONES[type].map((z) => ({ id: uid(), name: z[0], view: z[1], x: z[2], y: z[3], icon: z[4] || "", items: [] }));
+    return b;
+  }
+  function put(bag, zoneName, items) {
+    const z = bag.zones.filter((q) => q.name === zoneName)[0];
+    items.forEach((t) => z.items.push(Object.assign({ id: uid(), in: true, qty: 1, ex: true }, typeof t === "string" ? { text: t } : t)));
+  }
+  const LIST_SEEDS = [
+    ["Palestra", ["Asciugamano", "Maglietta di ricambio", "Scarpe da ginnastica", "Bottiglia d'acqua", "Lucchetto", "Cuffie", "Ciabatte", "Intimo di ricambio", "Shampoo e doccia"]],
+    ["Studio / Università", ["Laptop", "Caricatore", "Quaderno", "Astuccio", "Cuffie", "Powerbank", "Badge", "Bottiglia d'acqua", "Chiavi", "Portafoglio"]],
+    ["Viaggio 2 giorni", ["Documenti", "Caricatore telefono", "Powerbank", "Vestiti di ricambio", "Intimo", "Spazzolino e dentifricio", "Medicinali", "Portafoglio", "Chiavi di casa", "Cuffie"]],
+    ["Escursione", ["Acqua", "Snack energetici", "Giacca antipioggia", "Powerbank", "Kit primo soccorso", "Crema solare", "Cappello", "Torcia frontale", "Calze di ricambio"]]
+  ];
+  function seedLists() { return LIST_SEEDS.map((l) => ({ id: uid(), name: l[0], items: l[1].map((t) => ({ id: uid(), text: t, done: false })) })); }
+  function seed() {
+    const b1 = mkBag("Borsone palestra", "borsone", true);
+    put(b1, "Tasca frontale", [{ text: "Lucchetto", w: 120, ess: true }, { text: "Cuffie", w: 250, in: false }]);
+    put(b1, "Scomparto principale", [{ text: "Asciugamano", w: 450 }, { text: "Maglietta di ricambio", w: 200 }, { text: "Bottiglia", w: 600 }]);
+    put(b1, "Scomparto scarpe", [{ text: "Scarpe da ginnastica", w: 900 }]);
+    put(b1, "Tasca sinistra", [{ text: "Shaker", w: 250 }, { text: "Barrette energetiche", qty: 3, w: 40, exp: addDays(6), note: "Cioccolato e nocciole" }]);
+    const b2 = mkBag("Zainetto", "zainetto", true);
+    put(b2, "Tasca frontale", [{ text: "Chiavi", w: 80, ess: true }, { text: "Powerbank", w: 350 }, { text: "Cavo USB-C", w: 60 }]);
+    put(b2, "Scomparto principale", [{ text: "Caricatore", w: 180, note: "Con cavo lungo" }, { text: "Quaderni", qty: 2, w: 250 }]);
+    put(b2, "Tasca computer", [{ text: "Laptop", w: 1400, ess: true }]);
+    return { bags: [b1, b2], bagId: b1.id, view: "front", examples: true, theme: "auto", lists: seedLists(), listId: null, log: [], freq: {} };
+  }
+
+  /* ---------- pulizia dati (caricamento e import) ---------- */
+  function cleanItem(i) {
+    if (!i || typeof i !== "object") return null;
+    const t = str(i.text, 60).trim(); if (!t) return null;
+    const o = { id: str(i.id, 12) || uid(), text: t, in: i.in !== false, qty: Math.round(num(i.qty, 1, 99, 1)) };
+    const w = num(i.w, 0, 100000, 0); if (w) o.w = w;
+    const n = str(i.note, 120).trim(); if (n) o.note = n;
+    if (typeof i.exp === "string" && /^\d{4}-\d{2}-\d{2}$/.test(i.exp)) o.exp = i.exp;
+    if (i.low === true) o.low = true;
+    if (i.ex === true) o.ex = true;
+    if (i.ess === true) o.ess = true;
+    const ev = Math.round(num(i.every, 0, 3650, 0)); if (ev) { o.every = ev; o.chk = /^\d{4}-\d{2}-\d{2}$/.test(i.chk) ? i.chk : ymd(new Date()); }
+    if (i.tmp === true) o.tmp = true;
+    return o;
+  }
+  function cleanShape(s) {
+    if (!s || typeof s !== "object" || !KIND[s.k]) return null;
+    const o = { id: str(s.id, 12) || uid(), k: s.k, x: num(s.x, -100, 400, 0), y: num(s.y, -100, 520, 0), w: num(s.w, -400, 400, 40), h: num(s.h, -400, 400, 20) };
+    if (s.k !== "zip") { o.w = Math.max(8, Math.abs(o.w)); o.h = Math.max(8, Math.abs(o.h)); }
+    const c = hexOk(s.c); if (c) o.c = c;
+    if (["open", "body", "part"].indexOf(s.d) >= 0) o.d = s.d;
+    if (typeof s.name === "string" && s.name) o.name = str(s.name, 40);
+    if (s.r != null) o.r = num(s.r, 0, 100, 14);
+    if (s.zip === true) o.zip = true;
+    if (s.st === false) o.st = false;
+    return o;
+  }
+  function cleanBody(b) {
+    if (!b || typeof b !== "object") return null;
+    const o = { x: num(b.x, -100, 400, 60), y: num(b.y, -100, 520, 60), w: Math.max(40, num(b.w, 0, 500, 180)), h: Math.max(40, num(b.h, 0, 500, 300)), rt: num(b.rt, 0, 200, 24), rb: num(b.rb, 0, 200, 24) };
+    const c = hexOk(b.c); if (c) o.c = c;
+    if (b.st === false) o.st = false;
+    return o;
+  }
+  function cleanViews(v, type) {
+    const base = mkViews(type), out = {};
+    VIEWS.forEach((w) => {
+      const s = v && v[w.id];
+      if (s && typeof s === "object" && Array.isArray(s.shapes)) out[w.id] = { body: s.body === null ? null : cleanBody(s.body) || base[w.id].body, shapes: s.shapes.slice(0, 60).map(cleanShape).filter(Boolean) };
+      else out[w.id] = base[w.id];
+    });
+    return out;
+  }
+  function cleanZone(z) {
+    if (!z || typeof z !== "object") return null;
+    const zo = { id: str(z.id, 12) || uid(), name: str(z.name, 40) || "Scomparto", view: VIEWS.some((v) => v.id === z.view) ? z.view : "front", x: num(z.x, 0, 300, 150), y: num(z.y, 0, 420, 200), icon: ICONS[z.icon] ? z.icon : "", items: (Array.isArray(z.items) ? z.items : []).slice(0, 300).map(cleanItem).filter(Boolean) };
+    const zc = hexOk(z.color); if (zc) zo.color = zc;
+    if (z.nolbl === true) zo.nolbl = true;
+    return zo;
+  }
+  function cleanBag(b) {
+    if (!b || typeof b !== "object") return null;
+    const type = TPL_LABEL[b.type] ? b.type : "vuota";
+    return { id: str(b.id, 12) || uid(), name: str(b.name, 40).trim() || "Borsa", type, limit: num(b.limit, 0.5, 60, TPL_LIMIT[type]), uses: Math.round(num(b.uses, 0, 1e6, 0)), views: cleanViews(b.views, type), zones: (Array.isArray(b.zones) ? b.zones : []).slice(0, 80).map(cleanZone).filter(Boolean) };
+  }
+  function cleanList(l) {
+    if (!l || typeof l !== "object") return null;
+    return { id: str(l.id, 12) || uid(), name: str(l.name, 40).trim() || "Lista", items: (Array.isArray(l.items) ? l.items : []).slice(0, 200).map((i) => (i && typeof i.text === "string" && i.text.trim() ? { id: str(i.id, 12) || uid(), text: str(i.text, 60).trim(), done: i.done === true } : null)).filter(Boolean) };
+  }
+  function cleanLog(l) {
+    return (Array.isArray(l) ? l : []).slice(0, 80).map((g) => (g && typeof g === "object" && typeof g.x === "string" && g.x ? { t: num(g.t, 0, 4e12, 0), b: str(g.b, 40), z: str(g.z, 40), x: str(g.x, 60), a: g.a === "in" ? "in" : "out", e: g.e ? 1 : 0 } : null)).filter(Boolean);
+  }
+  function cleanFreq(f) {
+    const o = {};
+    if (!f || typeof f !== "object") return o;
+    Object.keys(f).slice(0, 200).forEach((k) => {
+      const e = f[k]; if (!e || typeof e.t !== "string" || !e.t.trim()) return;
+      const key = norm(e.t); if (!key) return;
+      const r = { t: str(e.t, 60).trim(), n: Math.round(num(e.n, 1, 9999, 1)) };
+      const w = num(e.w, 0, 100000, 0); if (w) r.w = Math.round(w);
+      o[key] = r;
+    });
+    return o;
+  }
+  function sanitize(raw) {
+    if (!raw || typeof raw !== "object" || !Array.isArray(raw.bags)) return null;
+    const bags = raw.bags.slice(0, 30).map(cleanBag).filter(Boolean);
+    const lists = Array.isArray(raw.lists) ? raw.lists.slice(0, 30).map(cleanList).filter(Boolean) : seedLists();
+    return {
+      bags, lists, log: cleanLog(raw.log), freq: cleanFreq(raw.freq),
+      bagId: bags.some((b) => b.id === raw.bagId) ? raw.bagId : (bags[0] ? bags[0].id : null),
+      view: VIEWS.some((v) => v.id === raw.view) ? raw.view : "front",
+      examples: raw.examples === true,
+      theme: ["auto", "light", "dark"].indexOf(raw.theme) >= 0 ? raw.theme : "auto",
+      listId: lists.some((l) => l.id === raw.listId) ? raw.listId : (lists[0] ? lists[0].id : null)
+    };
+  }
+  function load() {
+    try { const r = localStorage.getItem(KEY); if (r) { const s = sanitize(JSON.parse(r)); if (s) return s; } } catch (e) {}
+    return null;
+  }
+  let S = load() || sanitize(seed());
+  const UI = { screen: "map", placing: null, sheetId: null, q: "", tpl: "zainetto", confirmDel: false, confirmBag: false, confirmReset: false, edit: false, sel: null, drag: null, editItem: null, dnd: null, listEdit: false, confirmList: false, pickText: "", dlg: null, open: null, grid: true, guides: null, imgScope: "marks", logEss: false, confirmLog: false, shot: null, sug: [], z: { s: 1, x: 0, y: 0 }, zk: "", d3: false, rot: 0, pop: null, noclick: false };
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  const ORIG_THEME = document.documentElement.getAttribute("data-theme");
+  function applyTheme() {
+    const r = document.documentElement;
+    if (S.theme === "light" || S.theme === "dark") r.setAttribute("data-theme", S.theme);
+    else if (ORIG_THEME) r.setAttribute("data-theme", ORIG_THEME);
+    else r.removeAttribute("data-theme");
+  }
+
+  const bag = () => S.bags.filter((b) => b.id === S.bagId)[0] || S.bags[0];
+  const curView = () => bag().views[S.view];
+  function findZone(id) {
+    for (const b of S.bags) for (const z of b.zones) if (z.id === id) return { bag: b, zone: z };
+    return null;
+  }
+  const outItems = (b) => { const r = []; b.zones.forEach((z) => z.items.forEach((it) => { if (it.in === false) r.push({ zone: z, item: it }); })); return r; };
+  function selObj() { const v = curView(); return UI.sel === "body" ? v.body : v.shapes.filter((s) => s.id === UI.sel)[0] || null; }
+  const sn = (n) => { const s = UI.grid ? 5 : 2; return Math.round(n / s) * s; };
+  const inkOf = (h) => { const c = hex2rgb(h); return (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255 > 0.6 ? "#031521" : "#ffffff"; };
+  const touchBag = (b) => { b.uses = (b.uses || 0) + 1; };
+  function useBag(id) { if (S.bagId !== id) { S.bagId = id; const b = bag(); if (b) touchBag(b); } }
+  function setIn(b, z, it, val) {
+    if ((it.in !== false) === val) return;
+    it.in = val; touchBag(b);
+    S.log.unshift({ t: Date.now(), b: b.name, z: z.name, x: it.text, a: val ? "in" : "out", e: it.ess ? 1 : 0 });
+    if (S.log.length > 80) S.log.length = 80;
+  }
+  function bumpFreq(text, w) {
+    text = String(text).trim().slice(0, 60); const k = norm(text); if (k.length < 2) return;
+    const e = S.freq[k] || (S.freq[k] = { t: text, n: 0 });
+    e.n++; e.t = text; if (w) e.w = Math.round(w);
+    const ks = Object.keys(S.freq);
+    if (ks.length > 200) { ks.sort((a, c) => S.freq[a].n - S.freq[c].n); delete S.freq[ks[0]]; }
+  }
+
+  /* ---------- pesi, scadenze ---------- */
+  const itemW = (it) => (it.w || 0) * (it.qty || 1);
+  const zoneW = (z) => z.items.reduce((a, i) => a + (i.in !== false ? itemW(i) : 0), 0);
+  const bagW = (b) => b.zones.reduce((a, z) => a + zoneW(z), 0);
+  const remDue = (it) => (it.every ? it.every + daysLeft(it.chk || ymd(new Date())) : null);
+  function needsCheck(it) {
+    const rank = { "": 0, low: 1, soon: 2, bad: 3 }; let k = it.low ? "low" : "";
+    const up = (x) => { if (rank[x] > rank[k]) k = x; };
+    if (it.exp) { const d = daysLeft(it.exp); if (d < 0) up("bad"); else if (d <= 14) up("soon"); }
+    const r = remDue(it); if (r !== null) { if (r < 0) up("bad"); else if (r <= 2) up("soon"); }
+    return k;
+  }
+  function checkItems(b) { const r = []; b.zones.forEach((z) => z.items.forEach((it) => { const k = needsCheck(it); if (k) r.push({ zone: z, item: it, bad: k === "bad" }); })); return r; }
+  function chipsHtml(it) {
+    let h = it.ess ? '<span class="mc ess">★ essenziale</span>' : "";
+    const w = itemW(it);
+    if (w) h += '<span class="mc">' + fmtW(w) + "</span>";
+    if (it.exp) { const d = daysLeft(it.exp), vb = it.tmp ? "togli" : "scade"; h += '<span class="mc ' + (d < 0 ? "bad" : d <= 14 ? "soon" : "") + '">' + (d < 0 ? (it.tmp ? "da togliere" : "scaduto") : d === 0 ? vb + " oggi" : d <= 14 ? vb + " tra " + d + " g" : vb + " " + fmtDate(it.exp)) + "</span>"; }
+    if (it.every) { const r = remDue(it); h += '<span class="mc ' + (r < 0 ? "bad" : r <= 2 ? "soon" : "") + '">⏱ ' + (r < 0 ? "ricontrolla ora" : r === 0 ? "ricontrolla oggi" : "ricontrolla tra " + r + " g") + "</span>"; }
+    if (it.low) h += '<span class="mc low">da rifornire</span>';
+    if (it.note) h += '<span class="mn">' + esc(it.note) + "</span>";
+    return h;
+  }
+  const labelHtml = (it) => '<span class="n">' + ((it.qty || 1) > 1 ? (it.qty) + "× " : "") + esc(it.text) + (it.in === false ? ' <span class="st">· fuori</span>' : "") + '</span><span class="mcs">' + chipsHtml(it) + "</span>";
+  function parseQuick(s) {
+    s = s.trim(); let qty = 1, w = 0;
+    let m = s.match(/^(\d{1,2})\s*[x×]\s*(.+)$/i); if (m) { qty = +m[1]; s = m[2]; }
+    m = s.match(/^(.*\S)\s+(\d+(?:[.,]\d+)?)\s*(kg|g)$/i); if (m) { s = m[1]; w = parseFloat(m[2].replace(",", ".")) * (m[3].toLowerCase() === "kg" ? 1000 : 1); }
+    return { text: s.slice(0, 60), qty: Math.max(1, qty), w: Math.round(w) };
+  }
+
+  /* ---------- disegno SVG ---------- */
+  function hex2rgb(h) { h = h.replace("#", ""); return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)]; }
+  function strokeOf(h) {
+    const c = hex2rgb(h), l = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255, t = l < 0.6 ? 255 : 0, a = l < 0.6 ? 0.22 : 0.4;
+    return "rgb(" + c.map((v) => Math.round(v + (t - v) * a)).join(",") + ")";
+  }
+  const paint = (c, d) => (c ? 'fill="' + c + '" stroke="' + strokeOf(c) + '"' : 'class="d-' + d + '"');
+  const stitchPaint = (c) => (c ? 'stroke="' + strokeOf(c) + '"' : 'class="d-stitch"');
+  function bodyPath(x, y, w, h, rt, rb) {
+    rt = Math.max(0, Math.min(rt, w / 2, h / 2)); rb = Math.max(0, Math.min(rb, w / 2, h / 2));
+    return "M" + (x + rt) + " " + y + "H" + (x + w - rt) + "A" + rt + " " + rt + " 0 0 1 " + (x + w) + " " + (y + rt) + "V" + (y + h - rb) + "A" + rb + " " + rb + " 0 0 1 " + (x + w - rb) + " " + (y + h) + "H" + (x + rb) + "A" + rb + " " + rb + " 0 0 1 " + x + " " + (y + h - rb) + "V" + (y + rt) + "A" + rt + " " + rt + " 0 0 1 " + (x + rt) + " " + y + "Z";
+  }
+  const DEFS = '<defs><linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".17"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".24"/></linearGradient><radialGradient id="halo"><stop offset="0" style="stop-color:var(--dot)" stop-opacity=".55"/><stop offset="1" style="stop-color:var(--dot)" stop-opacity="0"/></radialGradient><filter id="blur" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="7"/></filter></defs>';
+  function bodySvg(b) {
+    const d = bodyPath(b.x, b.y, b.w, b.h, b.rt, b.rb);
+    let o = '<ellipse cx="' + (b.x + b.w / 2) + '" cy="' + (b.y + b.h + 5) + '" rx="' + (b.w * 0.42) + '" ry="9" style="fill:var(--bag-shadow)" opacity=".45" filter="url(#blur)" pointer-events="none"/>';
+    o += '<path data-sel="body" d="' + d + '" ' + paint(b.c, "body") + ' stroke-width="2"/>';
+    o += '<path d="' + d + '" fill="url(#sheen)" pointer-events="none"/>';
+    if (b.st !== false && b.w > 24 && b.h > 24) o += '<path d="' + bodyPath(b.x + 5, b.y + 5, b.w - 10, b.h - 10, b.rt - 5, b.rb - 5) + '" fill="none" ' + stitchPaint(b.c) + ' stroke-width="1.2" stroke-dasharray="3 4" opacity=".6" pointer-events="none"/>';
+    return o;
+  }
+  function zipLine(x1, y1, x2, y2, c) {
+    const lc = c ? 'stroke="' + c + '"' : 'class="d-zip"', fc = c ? 'fill="' + c + '"' : 'class="d-zipfill"';
+    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" ' + lc + ' stroke-width="3" stroke-dasharray="1.5 2.5" pointer-events="none"/><circle cx="' + x1 + '" cy="' + y1 + '" r="3.5" ' + fc + ' pointer-events="none"/>';
+  }
+  function shapeSvg(sh) {
+    const a = 'data-sel="' + sh.id + '"', x = sh.x, y = sh.y, w = sh.w, h = sh.h;
+    let o = "";
+    if (sh.k === "pocket" || sh.k === "strap") {
+      const r = sh.k === "strap" ? Math.min(w, h) / 2 : Math.min(sh.r == null ? 14 : sh.r, w / 2, h / 2);
+      o += '<rect ' + a + ' x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + r + '" ' + paint(sh.c, sh.d || "part") + ' stroke-width="2"/>';
+      if ((sh.d || "part") !== "open" || sh.c) o += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + r + '" fill="url(#sheen)" pointer-events="none"/>';
+      if (sh.st !== false && w > 16 && h > 16) o += '<rect x="' + (x + 4) + '" y="' + (y + 4) + '" width="' + (w - 8) + '" height="' + (h - 8) + '" rx="' + Math.max(r - 4, 0) + '" fill="none" ' + stitchPaint(sh.c) + ' stroke-width="1.2" stroke-dasharray="3 4" opacity=".75" pointer-events="none"/>';
+      if (sh.zip && sh.k === "pocket") o += zipLine(x + 10, y + 12, x + w - 10, y + 12, sh.c ? strokeOf(sh.c) : null);
+    } else if (sh.k === "flap") {
+      const d = "M" + x + " " + y + "H" + (x + w) + "V" + (y + h * 0.62) + "Q" + (x + w / 2) + " " + (y + h * 1.25) + " " + x + " " + (y + h * 0.62) + "Z";
+      o += '<path ' + a + ' d="' + d + '" ' + paint(sh.c, sh.d || "part") + ' stroke-width="2" stroke-linejoin="round"/><path d="' + d + '" fill="url(#sheen)" pointer-events="none"/>';
+    } else if (sh.k === "handle") {
+      const hd = "M" + x + " " + (y + h) + "Q" + (x + w / 2) + " " + (y - h) + " " + (x + w) + " " + (y + h);
+      o += '<path d="' + hd + '" fill="none" ' + (sh.c ? 'stroke="' + sh.c + '"' : 'class="d-handle"') + ' stroke-width="5" stroke-linecap="round" pointer-events="none"/><path ' + a + ' d="' + hd + '" fill="none" stroke="rgba(0,0,0,0)" stroke-width="18" pointer-events="stroke"/>';
+    } else if (sh.k === "zip") {
+      o += zipLine(x, y, x + w, y + h, sh.c || null) + '<line ' + a + ' x1="' + x + '" y1="' + y + '" x2="' + (x + w) + '" y2="' + (y + h) + '" stroke="rgba(0,0,0,0)" stroke-width="18" pointer-events="stroke"/>';
+    } else if (sh.k === "oval") {
+      o += '<ellipse ' + a + ' cx="' + (x + w / 2) + '" cy="' + (y + h / 2) + '" rx="' + (w / 2) + '" ry="' + (h / 2) + '" ' + paint(sh.c, sh.d || "open") + ' stroke-width="2"/>';
+    }
+    return o;
+  }
+  function selSvg() {
+    const o = selObj(); if (!o) return "";
+    let s = "", pts;
+    if (o.k === "zip") {
+      s += '<line class="selbox" x1="' + o.x + '" y1="' + o.y + '" x2="' + (o.x + o.w) + '" y2="' + (o.y + o.h) + '"/>';
+      pts = [["p1", o.x, o.y], ["p2", o.x + o.w, o.y + o.h]];
+    } else {
+      s += '<rect class="selbox" x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '"/>';
+      pts = [["tl", o.x, o.y], ["tr", o.x + o.w, o.y], ["bl", o.x, o.y + o.h], ["br", o.x + o.w, o.y + o.h]];
+    }
+    pts.forEach((p) => { s += '<g data-h="' + p[0] + '"><circle class="hnd" cx="' + p[1] + '" cy="' + p[2] + '" r="7"/><circle cx="' + p[1] + '" cy="' + p[2] + '" r="17" fill="transparent"/></g>'; });
+    return s;
+  }
+  function zoneSvg(z) {
+    const hasOut = z.items.some((i) => i.in === false), crit = z.items.some((i) => i.ess && i.in === false), zc = hexOk(z.color), chk = z.items.some((i) => needsCheck(i) === "bad" || needsCheck(i) === "soon" || needsCheck(i) === "low");
+    const nm = z.name.length > 20 ? z.name.slice(0, 19) + "…" : z.name;
+    let s = '<g class="zone' + (hasOut ? " out" : "") + (crit ? " crit" : "") + (UI.edit ? " ghost" : "") + '" data-zone="' + z.id + '"' + (zc ? ' style="--dot:' + zc + ";--dot-ink:" + inkOf(zc) + '"' : "") + ' tabindex="' + (UI.edit ? "-1" : "0") + '" role="button" aria-label="' + esc(z.name) + ", " + z.items.length + ' oggetti">';
+    s += '<circle cx="' + z.x + '" cy="' + z.y + '" r="28" fill="transparent"/><circle cx="' + z.x + '" cy="' + z.y + '" r="26" fill="url(#halo)"/>';
+    if (hasOut) s += '<circle class="pulse" cx="' + z.x + '" cy="' + z.y + '" r="16"/>';
+    s += '<circle class="dot" cx="' + z.x + '" cy="' + z.y + '" r="16"/>';
+    if (z.icon && ICONS[z.icon]) {
+      s += '<g class="ico" transform="translate(' + (z.x - 9) + " " + (z.y - 9) + ') scale(.75)" pointer-events="none">' + ICONS[z.icon] + "</g>";
+      s += '<circle class="badge" cx="' + (z.x + 13) + '" cy="' + (z.y - 13) + '" r="8"/><text class="badge-t" x="' + (z.x + 13) + '" y="' + (z.y - 13) + '">' + z.items.length + "</text>";
+    } else s += '<text class="cnt" x="' + z.x + '" y="' + z.y + '">' + z.items.length + "</text>";
+    if (chk) s += '<circle class="flag" cx="' + (z.x - 13) + '" cy="' + (z.y - 13) + '" r="5"/>';
+    return s + (z.nolbl ? "" : '<text class="lbl" x="' + z.x + '" y="' + (z.y + 34) + '">' + esc(nm) + "</text>") + "</g>";
+  }
+
+  /* ---------- render ---------- */
+  function renderChips() {
+    $("#chips").innerHTML = S.bags.map((b) => '<button class="chip" data-bag="' + b.id + '" aria-pressed="' + (b.id === S.bagId) + '">' + esc(b.name) + "</button>").join("") + '<button class="chip plus" id="chipPlus" aria-label="Nuova borsa">+</button>';
+  }
+  function renderAlerts() {
+    const el = $("#alerts");
+    if (UI.screen !== "map" || UI.edit || !S.bags.length) { el.hidden = true; return; }
+    const b = bag(), out = outItems(b), chk = checkItems(b), w = bagW(b), lim = b.limit * 1000;
+    let h = "";
+    if (w > lim) h += '<button class="pill danger" data-al="over">Sovraccarico +' + fmtW(w - lim) + "</button>";
+    const essOut = out.filter((x) => x.item.ess).length;
+    if (essOut) h += '<button class="pill danger" data-al="ess">' + essOut + (essOut === 1 ? " essenziale fuori" : " essenziali fuori") + "</button>";
+    if (out.length) h += '<button class="pill warn" data-al="out">' + out.length + (out.length === 1 ? " oggetto fuori" : " oggetti fuori") + '</button><button class="pill ghost" data-al="allin">Rimetti tutto in borsa</button>';
+    if (chk.length) h += '<button class="pill ' + (chk.some((x) => x.bad) ? "danger" : "warn") + '" data-al="chk">' + chk.length + (chk.length === 1 ? " da controllare" : " da controllare") + "</button>";
+    if (!h && b.zones.some((z) => z.items.length)) h = '<span class="pill ok">Borsa pronta</span>';
+    el.hidden = !h; el.innerHTML = h;
+  }
+  function renderLoad() {
+    const el = $("#load");
+    if (!S.bags.length || UI.edit || UI.screen !== "map") { el.hidden = true; return; }
+    const b = bag(), w = bagW(b), lim = b.limit * 1000, p = Math.min(100, (w / lim) * 100), cls = w > lim ? "over" : p >= 75 ? "warn" : "ok";
+    el.hidden = false; el.className = "load " + cls;
+    el.innerHTML = '<div class="ltop"><span class="lk">Carico</span><span class="lv">' + fmtW(w) + "<small> / " + fmtKg(b.limit) + '</small></span></div><div class="bar"><i style="width:' + p + '%"></i></div>';
+  }
+  const renderMeta = () => { renderAlerts(); renderLoad(); };
+  function renderTabs() { $("#tabs").innerHTML = VIEWS.map((v) => '<button class="tab" role="tab" data-view="' + v.id + '" aria-selected="' + (v.id === S.view) + '">' + v.name + "</button>").join(""); }
+  function renderMap() {
+    const b = bag(), v = b.views[S.view], zs = b.zones.filter((z) => z.view === S.view);
+    const zk = b.id + S.view; if (UI.zk !== zk) { UI.zk = zk; UI.z = { s: 1, x: 0, y: 0 }; }
+    let s = '<svg id="mapSvg" viewBox="' + vbStr() + '" preserveAspectRatio="xMidYMid meet" role="group" aria-label="' + esc(b.name) + '">' + DEFS;
+    if (v.body) s += bodySvg(v.body);
+    v.shapes.forEach((sh) => { s += shapeSvg(sh); });
+    if (UI.edit) s += (UI.grid ? gridSvg() : "") + axisSvg(v) + guideSvg() + selSvg();
+    zs.forEach((z) => { s += zoneSvg(z); });
+    $("#svgHost").innerHTML = use3d() ? scene3d() : s + "</svg>";
+    const st = $("#stage");
+    st.classList.toggle("placing", !!UI.placing); st.classList.toggle("edit", UI.edit);
+    $("#hint").hidden = !UI.placing;
+    $("#addZone").hidden = !!UI.placing || UI.edit;
+    $("#editDraw").hidden = !!UI.placing || UI.edit;
+    $("#shotBtn").hidden = !!UI.placing || UI.edit;
+    $("#d3Btn").hidden = !!UI.placing || UI.edit; $("#d3Btn").setAttribute("aria-pressed", String(UI.d3));
+    $("#zoomBtn").hidden = UI.z.s <= 1 || use3d();
+    $("#exNote").hidden = !S.examples || UI.edit;
+    if (UI.placing) $("#hintText").textContent = UI.placing.id ? "Tocca dove spostare il segnalino" : "Tocca il punto o la tasca dove metterlo";
+  }
+  const swatch = (c, cur) => '<button class="sw" data-color="' + c + '" style="background:' + c + '" aria-pressed="' + (cur === c) + '" aria-label="Colore ' + c + '"></button>';
+  function renderEdit() {
+    const el = $("#editPanel");
+    if (!UI.edit) { el.hidden = true; return; }
+    el.hidden = false;
+    const v = curView(), o = selObj();
+    let h = '<div class="ehead"><strong>Modifica disegno</strong><button class="btn primary sm" data-act="done">Fine</button></div>';
+    h += '<div class="addrow">' + Object.keys(KIND).map((k) => '<button class="btn sm" data-add="' + k + '">+ ' + KIND[k].label + "</button>").join("") + "</div>";
+    h += '<label class="chk"><input type="checkbox" data-tg="grid"' + (UI.grid ? " checked" : "") + '> Griglia magnetica · le guide rosa compaiono da sole</label>';
+    if (!o) {
+      h += '<p class="tiny">Tocca una parte del disegno per cambiarla. Trascinala per spostarla e usa i cerchietti agli angoli per ridimensionarla. Aggiungi tasche, cerniere e manici dai pulsanti qui sopra.</p>';
+      h += '<div class="acts"><button class="btn sm danger" data-act="reset">' + (UI.confirmReset ? "Conferma: ripristina questa vista" : "Ripristina disegno di base") + '</button><button class="btn sm danger" data-act="delbag">' + (UI.confirmBag ? "Conferma: elimina questa borsa" : "Elimina questa borsa") + "</button></div>";
+    } else {
+      const isBody = UI.sel === "body", cur = o.c || "";
+      h += '<div class="etitle">' + (isBody ? "Corpo della borsa" : KIND[o.k].label) + "</div>";
+      if (!isBody) h += '<input class="field sm" data-prop="name" value="' + esc(o.name || "") + '" placeholder="Nome (es. ' + KIND[o.k].label + ')" maxlength="40" aria-label="Nome della parte" autocomplete="off">';
+      h += '<div class="swrow"><button class="sw auto" data-color="" aria-pressed="' + (cur === "") + '" aria-label="Colore predefinito"></button>' + COLORS.map((c) => swatch(c, cur)).join("");
+      if (o.k !== "zip") h += '<label class="sw custom" aria-label="Colore personalizzato"><input type="color" data-prop="color" value="' + (cur || "#3db8ff") + '"></label>';
+      h += "</div>";
+      if (isBody) {
+        h += '<label class="rng">Angoli alti<input type="range" min="0" max="120" value="' + o.rt + '" data-prop="rt"></label><label class="rng">Angoli bassi<input type="range" min="0" max="120" value="' + o.rb + '" data-prop="rb"></label>';
+      } else if (o.k === "pocket") h += '<label class="rng">Angoli<input type="range" min="0" max="60" value="' + (o.r == null ? 14 : o.r) + '" data-prop="r"></label>';
+      let tg = "";
+      if (o.k === "pocket") tg += '<label class="chk"><input type="checkbox" data-tg="zip"' + (o.zip ? " checked" : "") + "> Cerniera</label>";
+      if (o.k === "pocket" || isBody) tg += '<label class="chk"><input type="checkbox" data-tg="st"' + (o.st !== false ? " checked" : "") + "> Cuciture</label>";
+      if (tg) h += '<div class="tgls">' + tg + "</div>";
+      h += '<div class="acts"><button class="btn sm" data-act="center">Centra</button>' + (isBody ? "" : '<button class="btn sm" data-act="mirror">Specchia</button><button class="btn sm" data-act="dup">Duplica</button><button class="btn sm" data-act="front">Porta avanti</button><button class="btn sm" data-act="backw">Porta dietro</button><button class="btn sm danger" data-act="del">Elimina</button>') + "</div>";
+    }
+    el.innerHTML = h;
+  }
+  function renderScreens() {
+    ["map", "search", "prep", "esc", "bags"].forEach((n) => { $("#scr" + n[0].toUpperCase() + n.slice(1)).hidden = UI.screen !== n; });
+    $("#chips").hidden = UI.screen !== "map" || UI.edit;
+    $("#nav").hidden = UI.edit;
+    document.querySelectorAll(".nbtn").forEach((b) => { if (b.dataset.s === UI.screen) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  }
+  function renderSearch() {
+    renderQSug();
+    const q = UI.q.trim().toLowerCase(), rows = [];
+    S.bags.forEach((b) => b.zones.forEach((z) => z.items.forEach((it) => { if (!q || it.text.toLowerCase().indexOf(q) >= 0 || (it.note || "").toLowerCase().indexOf(q) >= 0) rows.push({ b, z, it }); })));
+    rows.sort((a, c) => a.it.text.localeCompare(c.it.text, "it"));
+    if (!rows.length) { $("#results").innerHTML = '<div class="empty">' + (q ? 'Nessun oggetto con "' + esc(UI.q.trim()) + '".' : "Non hai ancora inserito oggetti.") + "</div>"; return; }
+    $("#results").innerHTML = rows.map((r) => {
+      const vn = VIEWS.filter((v) => v.id === r.z.view)[0].name;
+      return '<button class="row go" data-zone="' + r.z.id + '"><div class="grow"><div class="t">' + ((r.it.qty || 1) > 1 ? r.it.qty + "× " : "") + esc(r.it.text) + '</div><div class="s">' + esc(r.b.name) + " › " + esc(r.z.name) + " · " + vn + "</div>" + (r.it.in === false ? '<div class="s warn">Fuori dalla borsa</div>' : "") + '<div class="mcs">' + chipsHtml(r.it) + "</div></div></button>";
+    }).join("");
+  }
+  function norm(s) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
+  function locate(text) {
+    const n = norm(text); if (n.length < 3) return null;
+    const order = [bag()].concat(S.bags.filter((b) => b !== bag()));
+    for (const b of order) for (const z of b.zones) for (const it of z.items) {
+      const m = norm(it.text);
+      if (m.length >= 3 && (m === n || m.indexOf(n) >= 0 || n.indexOf(m) >= 0)) return { bag: b, zone: z, item: it };
+    }
+    return null;
+  }
+  const curList = () => S.lists.filter((l) => l.id === S.listId)[0] || S.lists[0] || null;
+  function renderPrep() {
+    const L = curList();
+    let h = '<h2>Prepara la borsa</h2><div class="chips" id="listChips">' + S.lists.map((l) => '<button class="chip" data-list="' + l.id + '" aria-pressed="' + (L && l.id === L.id) + '">' + esc(l.name) + "</button>").join("") + '<button class="chip plus" id="listPlus" aria-label="Nuova lista">+</button></div>';
+    if (!L) { $("#prepBody").innerHTML = h + '<div class="empty">Nessuna lista. Creane una con il +.</div>'; return; }
+    const done = L.items.filter((i) => i.done).length, tot = L.items.length;
+    h += '<div class="prep-top"><div class="prog"><div class="bar ' + (tot && done === tot ? "" : "") + '"><i style="width:' + (tot ? (done / tot) * 100 : 0) + '%"></i></div><b>' + done + "/" + tot + ' pronti</b></div><div class="acts"><button class="btn sm" data-p="reset">Azzera spunte</button><button class="btn sm" data-p="edit">' + (UI.listEdit ? "Fine modifica" : "Modifica lista") + "</button></div></div>";
+    if (UI.listEdit) {
+      h += '<input class="field sm" data-p="rename" value="' + esc(L.name) + '" maxlength="40" aria-label="Nome della lista"><form id="plAdd" style="display:flex;gap:8px"><input class="field sm" id="plInput" placeholder="Aggiungi voce" autocomplete="off" maxlength="60" aria-label="Nuova voce"><button class="btn primary sm" type="submit">Aggiungi</button></form>';
+      h += '<ul class="plist">' + L.items.map((i) => '<li class="prow"><span class="grow t">' + esc(i.text) + '</span><button class="del" data-pdel="' + i.id + '" aria-label="Rimuovi ' + esc(i.text) + '">×</button></li>').join("") + "</ul>";
+      h += '<div class="acts"><button class="btn sm danger" data-p="dellist">' + (UI.confirmList ? "Conferma: elimina lista" : "Elimina lista") + "</button></div>";
+    } else {
+      h += '<ul class="plist">' + L.items.map((i) => {
+        const f = locate(i.text);
+        const loc = f ? '<button class="locb' + (f.item.in === false ? " out" : "") + '" data-goto="' + f.zone.id + '">' + esc(f.bag.name) + " › " + esc(f.zone.name) + (f.item.in === false ? " · fuori" : "") + "</button>" : '<button class="locb add" data-padd="' + i.id + '">Non è in nessuna borsa · aggiungi</button>';
+        return '<li class="prow' + (i.done ? " done" : "") + '"><button class="tick" data-ptick="' + i.id + '" aria-pressed="' + !!i.done + '" aria-label="Pronto"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button><div class="grow"><div class="t">' + esc(i.text) + "</div>" + loc + "</div></li>";
+      }).join("") + "</ul>";
+      if (!tot) h += '<div class="empty">Lista vuota. Tocca "Modifica lista" per aggiungere le voci.</div>';
+    }
+    $("#prepBody").innerHTML = h;
+  }
+  function renderBags() {
+    renderDash();
+    $("#bagList").innerHTML = !S.bags.length ? '<div class="empty">Non hai nessuna borsa. Creane una qui sotto.</div>' : S.bags.map((b) => {
+      const n = b.zones.reduce((a, z) => a + z.items.length, 0);
+      return '<div class="row wrap"><div class="grow"><input class="bagname" data-ren="' + b.id + '" value="' + esc(b.name) + '" maxlength="40" aria-label="Nome borsa"><div class="s">' + (TPL_LABEL[b.type] || "Borsa") + " · " + b.zones.length + " segnalini · " + n + " oggetti · " + fmtW(bagW(b)) + '</div></div><div class="acts"><button class="btn sm" data-open="' + b.id + '">Apri</button><button class="btn sm" data-share="' + b.id + '">Lista</button><button class="btn sm" data-dup="' + b.id + '">Duplica</button><button class="btn sm" data-code="' + b.id + '">Codice</button><button class="btn sm danger" data-delbag="' + b.id + '">' + (UI.confirmDel === b.id ? "Conferma" : "Elimina") + "</button></div></div>";
+    }).join("");
+    $("#tpls").innerHTML = Object.keys(TPL_LABEL).map((k) => '<button type="button" class="tpl" data-tpl="' + k + '" aria-pressed="' + (UI.tpl === k) + '">' + TPL_LABEL[k] + "</button>").join("");
+    $("#themeSeg").innerHTML = [["auto", "Sistema"], ["light", "Chiaro"], ["dark", "Scuro"]].map((t) => '<button data-theme="' + t[0] + '" aria-pressed="' + (S.theme === t[0]) + '">' + t[1] + "</button>").join("");
+  }
+  function removeBag(id) {
+    S.bags = S.bags.filter((b) => b.id !== id);
+    if (!S.bags.some((b) => b.id === S.bagId)) S.bagId = S.bags.length ? S.bags[0].id : null;
+    S.view = "front";
+    UI.confirmDel = false; UI.confirmBag = false; UI.edit = false; UI.sel = null; UI.placing = null;
+    closeAll();
+  }
+  function renderAll() {
+    if (!S.bags.length) {
+      UI.screen = UI.screen === "map" || UI.screen === "search" || UI.screen === "esc" ? "bags" : UI.screen; UI.edit = false; UI.placing = null;
+      $("#chips").innerHTML = ""; $("#alerts").hidden = true; $("#load").hidden = true;
+      renderScreens(); renderBags(); renderPrep();
+      return;
+    }
+    renderChips(); renderMeta(); renderTabs(); renderMap(); renderEdit(); renderScreens();
+    if (UI.screen === "search") renderSearch();
+    if (UI.screen === "prep") renderPrep();
+    if (UI.screen === "esc") renderEsc();
+    if (UI.screen === "bags") renderBags();
+  }
+
+  /* ---------- schede ---------- */
+  const SHEETS = ["#sheet", "#loadSheet", "#pickSheet", "#dlg", "#imgSheet"];
+  function showSheet(id) { SHEETS.forEach((s) => { $(s).hidden = s !== id; }); $("#scrim").hidden = false; UI.open = id; }
+  function closeAll() {
+    const f = UI.sheetId && findZone(UI.sheetId);
+    if (f && !f.zone.name.trim()) f.zone.name = "Scomparto";
+    UI.sheetId = null; UI.editItem = null; UI.dnd = null; UI.open = null; UI.dlg = null;
+    SHEETS.forEach((s) => { $(s).hidden = true; }); $("#scrim").hidden = true;
+    save(); renderAll();
+  }
+  function iconSvg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[k] + "</svg>"; }
+  function renderZoneHead() {
+    const f = findZone(UI.sheetId); if (!f) return;
+    const z = f.zone;
+    const zc = hexOk(z.color);
+    $("#iconBtn").style.background = zc || ""; $("#iconBtn").style.color = zc ? inkOf(zc) : "";
+    $("#colorRow").innerHTML = ["", "#ff5d5d", "#ff9f43", "#facc15", "#35d07f", "#8b7bff", "#ff5ec4", "#ffffff", "#20262e"].map((c) => '<button type="button" class="mcol" data-zc="' + c + '" style="background:' + (c || "var(--dot)") + '" aria-pressed="' + ((z.color || "") === c) + '" aria-label="' + (c ? "Colore " + c : "Colore predefinito") + '"></button>').join("");
+    $("#lblToggle").checked = !z.nolbl;
+    $("#iconBtn").innerHTML = z.icon && ICONS[z.icon] ? iconSvg(z.icon) : String(z.items.length);
+    $("#iconPick").innerHTML = '<button class="ib" data-icon="" aria-pressed="' + !z.icon + '" aria-label="Mostra il numero">123</button>' + Object.keys(ICONS).map((k) => '<button class="ib" data-icon="' + k + '" aria-pressed="' + (z.icon === k) + '" aria-label="Icona ' + k + '">' + iconSvg(k) + "</button>").join("");
+  }
+  function renderItems() {
+    const f = findZone(UI.sheetId); if (!f) return;
+    const z = f.zone;
+    $("#itemList").innerHTML = z.items.length ? z.items.map((it) => {
+      let h = '<li class="item' + (it.in === false ? " out" : "") + (it.ess && it.in === false ? " crit" : "") + (UI.pop === it.id ? " pop" : "") + (UI.dnd && UI.dnd.id === it.id ? " drag" : "") + '" data-id="' + it.id + '"><div class="irow"><button class="tick" data-tick="' + it.id + '" aria-pressed="' + (it.in !== false) + '" aria-label="Nella borsa"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button><button class="itx" data-edit="' + it.id + '" aria-expanded="' + (UI.editItem === it.id) + '">' + labelHtml(it) + '</button><span class="grip" data-grip aria-label="Trascina per riordinare"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg></span></div>';
+      if (UI.editItem === it.id) {
+        h += '<div class="ied"><label>Nome<input class="field" data-f="text" value="' + esc(it.text) + '" maxlength="60" autocomplete="off"></label><div class="two"><label>Quantità<div class="step"><button type="button" data-qty="-1" aria-label="Meno">−</button><input class="field" data-f="qty" type="number" inputmode="numeric" min="1" max="99" value="' + (it.qty || 1) + '"><button type="button" data-qty="1" aria-label="Più">+</button></div></label><label>Peso di uno (g)<input class="field" data-f="w" type="number" inputmode="decimal" min="0" step="1" value="' + (it.w || "") + '" placeholder="es. 250"></label></div><label>Nota<input class="field" data-f="note" value="' + esc(it.note || "") + '" maxlength="120" placeholder="es. caricatore con cavo lungo" autocomplete="off"></label><label>Scadenza<input class="field" data-f="exp" type="date" value="' + esc(it.exp || "") + '"></label><label class="chk"><input type="checkbox" data-f="tmp"' + (it.tmp ? " checked" : "") + '> Temporaneo: da togliere entro la scadenza</label><label>Promemoria ogni (giorni)<input class="field" data-f="every" type="number" inputmode="numeric" min="1" max="3650" value="' + (it.every || "") + '" placeholder="es. 180 per cambiare le pile"></label>' + (it.every ? '<div class="acts"><button type="button" class="btn sm" data-act="checked">Fatto: ricontrollato oggi</button></div>' : "") + '<label class="chk"><input type="checkbox" data-f="ess"' + (it.ess ? " checked" : "") + '> ★ Essenziale (rosso se resta fuori)</label><label class="chk"><input type="checkbox" data-f="low"' + (it.low ? " checked" : "") + '> Da rifornire</label><div class="acts"><button type="button" class="btn sm primary" data-act="closeitem">Fatto</button><button type="button" class="btn sm danger" data-act="delitem">Elimina oggetto</button></div></div>';
+      }
+      return h + "</li>";
+    }).join("") : '<li class="empty">Scomparto vuoto. Scrivi qui sotto il primo oggetto.</li>';
+    const vn = VIEWS.filter((v) => v.id === z.view)[0].name, w = zoneW(z);
+    $("#zoneSub").textContent = f.bag.name + " · " + vn + " · " + z.items.length + (z.items.length === 1 ? " oggetto" : " oggetti") + (w ? " · " + fmtW(w) : "");
+    renderZoneHead(); renderSug();
+  }
+  function openZone(id, isNew) {
+    const f = findZone(id); if (!f) return;
+    UI.sheetId = id; UI.editItem = null; UI.confirmDel = false;
+    $("#zoneName").value = f.zone.name; $("#delZone").textContent = "Elimina segnalino"; $("#styleWrap").hidden = true;
+    renderItems(); showSheet("#sheet");
+    if (isNew) { $("#zoneName").focus(); $("#zoneName").select(); }
+  }
+  function renderLoadTop() {
+    const b = bag(), w = bagW(b), lim = b.limit * 1000, p = Math.min(100, (w / lim) * 100), cls = w > lim ? "over" : p >= 75 ? "warn" : "";
+    const noW = b.zones.reduce((a, z) => a + z.items.filter((i) => i.in !== false && !i.w).length, 0);
+    let h = '<div class="big">' + fmtW(w) + "<small> di " + fmtKg(b.limit) + '</small></div><div class="bar ' + cls + '"><i style="width:' + p + '%"></i></div>';
+    if (w > lim) h += '<p class="msg over">Hai ' + fmtW(w - lim) + " oltre il limite. Togli qualcosa o scegli una borsa più capiente.</p>";
+    else if (p >= 75) h += '<p class="msg warn">Sei vicino al limite: restano ' + fmtW(lim - w) + ".</p>";
+    else if (w) h += '<p class="msg">Hai ancora ' + fmtW(lim - w) + " di margine.</p>";
+    if (noW) h += '<p class="tiny">' + noW + (noW === 1 ? " oggetto non ha" : " oggetti non hanno") + " il peso: aggiungilo per un totale più preciso.</p>";
+    if (b.type === "zainetto" && w >= 1500) {
+      const fr = b.zones.filter((z) => z.view === "front").reduce((a, z) => a + zoneW(z), 0);
+      if (fr / w > 0.5) h += '<p class="msg warn">Più della metà del peso è nelle tasche davanti. Sposta le cose pesanti nello scomparto principale, vicino alla schiena.</p>';
+    }
+    $("#lsTop").innerHTML = h;
+  }
+  function openLoad() {
+    const b = bag(); if (!b) return;
+    $("#lsTitle").textContent = "Carico · " + b.name; $("#limInput").value = b.limit;
+    renderLoadTop();
+    const zs = b.zones.map((z) => ({ z, w: zoneW(z) })).sort((a, c) => c.w - a.w), tot = bagW(b) || 1;
+    $("#lsBrk").innerHTML = zs.length ? zs.map((r) => '<li><button data-zone="' + r.z.id + '"><span>' + esc(r.z.name) + " <small style=\"color:var(--muted)\">· " + VIEWS.filter((v) => v.id === r.z.view)[0].name + "</small></span><b>" + (r.w ? fmtW(r.w) : "—") + '</b><div class="bar"><i style="width:' + (r.w / tot) * 100 + '%"></i></div></button></li>').join("") : '<li class="empty">Aggiungi dei segnalini per vedere dove sta il peso.</li>';
+    showSheet("#loadSheet");
+  }
+  function openPick(text) {
+    UI.pickText = text;
+    const b = bag();
+    $("#pickTitle").textContent = "Dove metti «" + text.slice(0, 24) + (text.length > 24 ? "…" : "") + "»?";
+    $("#pickList").innerHTML = b.zones.length ? b.zones.map((z) => '<button data-pz="' + z.id + '">' + esc(z.name) + "<small>" + esc(b.name) + " · " + VIEWS.filter((v) => v.id === z.view)[0].name + "</small></button>").join("") : '<div class="empty">Questa borsa non ha ancora segnalini. Vai alla mappa e aggiungine uno.</div>';
+    showSheet("#pickSheet");
+  }
+
+  /* ---------- backup, condivisione, import ---------- */
+  let dlCache;
+  async function getDl() {
+    if (dlCache !== undefined) return dlCache;
+    try { dlCache = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { dlCache = null; }
+    return dlCache;
+  }
+  function openDlg(o) {
+    UI.dlg = o; $("#dlgQr").hidden = true;
+    $("#dlgTitle").textContent = o.title; $("#dlgSub").textContent = o.sub;
+    const t = $("#dlgText"); t.value = o.text || ""; t.readOnly = !!o.readonly; t.placeholder = o.placeholder || "";
+    $("#dlgMsg").textContent = ""; $("#dlgMsg").className = "msg";
+    $("#dlgActs").innerHTML = o.acts.map((a) => '<button class="btn' + (a.cls ? " " + a.cls : "") + '" data-da="' + a.id + '">' + a.label + "</button>").join("");
+    showSheet("#dlg");
+  }
+  const dmsg = (m, bad) => { const e = $("#dlgMsg"); e.textContent = m; e.className = "msg" + (bad ? " over" : ""); };
+  function exportBackup() {
+    const data = { v: 1, bags: S.bags, lists: S.lists, log: S.log, freq: S.freq, theme: S.theme, bagId: S.bagId, view: S.view };
+    openDlg({ title: "Backup dei dati", sub: "Copia o salva questo testo. Per ripristinarlo su un altro dispositivo usa Importa backup.", text: JSON.stringify(data, null, 1), readonly: true, filename: "mappa-zaino-backup.json", acts: [{ id: "copy", label: "Copia", cls: "primary" }, { id: "save", label: "Salva file" }] });
+  }
+  function openImport() {
+    openDlg({ title: "Importa", sub: "Incolla un codice borsa (viene aggiunta alle tue) oppure un backup completo (sostituisce i dati attuali).", text: "", readonly: false, placeholder: "Incolla qui il codice o il backup", acts: [{ id: "file", label: "Scegli file" }, { id: "import", label: "Importa", cls: "primary" }] });
+  }
+  function listText(b) {
+    const lim = b.limit * 1000, w = bagW(b);
+    let t = b.name + " · " + fmtW(w) + " / " + fmtKg(b.limit) + "\n";
+    VIEWS.forEach((v) => {
+      const zs = b.zones.filter((z) => z.view === v.id && z.items.length);
+      if (!zs.length) return;
+      t += "\n" + v.name.toUpperCase() + "\n";
+      zs.forEach((z) => {
+        t += "\n" + z.name + "\n";
+        z.items.forEach((it) => {
+          t += "  • " + ((it.qty || 1) > 1 ? it.qty + "× " : "") + it.text + (itemW(it) ? " (" + fmtW(itemW(it)) + ")" : "") + (it.note ? " – " + it.note : "") + (it.exp ? " [scade " + fmtDate(it.exp) + "]" : "") + (it.low ? " [da rifornire]" : "") + (it.in === false ? " [fuori]" : "") + "\n";
+        });
+      });
+    });
+    return t.trim() + (w > lim ? "\n\nAttenzione: oltre il limite di " + fmtKg(b.limit) + "." : "") + "\n";
+  }
+  function shareList(id) {
+    const b = S.bags.filter((x) => x.id === id)[0]; if (!b) return;
+    openDlg({ title: "Lista di " + b.name, sub: "Copiala per incollarla in un messaggio o in una nota, oppure salvala come file di testo.", text: listText(b), readonly: true, filename: (b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "borsa") + ".txt", acts: [{ id: "copy", label: "Copia", cls: "primary" }, { id: "save", label: "Salva file" }] });
+  }
+  function tryImport() {
+    const txt = $("#dlgText").value.trim();
+    if (/^MZ[01]:/.test(txt)) { importCode(txt); return; }
+    let raw;
+    try { raw = JSON.parse($("#dlgText").value); } catch (e) { dmsg("Il testo non è un backup valido.", true); return; }
+    const c = sanitize(raw);
+    if (!c) { dmsg("Nel file non ho trovato nessuna borsa.", true); return; }
+    UI.dlg.pending = c;
+    $("#dlgSub").textContent = "Trovate " + c.bags.length + (c.bags.length === 1 ? " borsa" : " borse") + " e " + c.lists.length + (c.lists.length === 1 ? " lista" : " liste") + ". Vuoi sostituire i dati attuali?";
+    $("#dlgActs").innerHTML = '<button class="btn danger" data-da="confirmimport">Sì, sostituisci tutto</button><button class="btn" data-da="cancel">Annulla</button>';
+    dmsg("");
+  }
+  $("#dlgActs").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-da]"); if (!b || !UI.dlg) return;
+    const a = b.dataset.da;
+    if (a === "copy") {
+      try { await navigator.clipboard.writeText($("#dlgText").value); dmsg("Copiato negli appunti."); } catch (err) { $("#dlgText").focus(); $("#dlgText").select(); dmsg("Il testo è selezionato: copialo a mano."); }
+    } else if (a === "save") {
+      const dl = await getDl();
+      if (!dl) { dmsg("Il salvataggio non è disponibile qui. Usa Copia.", true); return; }
+      try { await dl.save({ filename: UI.dlg.filename, data: $("#dlgText").value }); dmsg("File pronto."); } catch (err) { dmsg(err && err.code === "declined" ? "Salvataggio annullato." : "Non riesco a salvare qui. Usa Copia.", !(err && err.code === "declined")); }
+    } else if (a === "file") $("#dlgFile").click();
+    else if (a === "import") tryImport();
+    else if (a === "confirmimport") {
+      const c = UI.dlg.pending; if (!c) return;
+      S = c; applyTheme(); UI.screen = "bags"; UI.edit = false; UI.sel = null; closeAll();
+    } else if (a === "confirmcode") {
+      const nb = UI.dlg.pendingBag; if (!nb) return;
+      if (S.bags.length >= 30) { dmsg("Hai già 30 borse: eliminane una prima.", true); return; }
+      S.bags.push(nb); S.bagId = nb.id; S.view = "front"; UI.screen = "map"; closeAll();
+    } else if (a === "cancel") closeAll();
+  });
+  $("#dlgFile").addEventListener("change", function () {
+    const f = this.files && this.files[0]; if (!f) return;
+    if (f.size > 4000000) { dmsg("Il file è troppo grande.", true); return; }
+    const r = new FileReader();
+    r.onload = () => { $("#dlgText").value = String(r.result || ""); tryImport(); };
+    r.onerror = () => dmsg("Non riesco a leggere il file.", true);
+    r.readAsText(f); this.value = "";
+  });
+
+  /* ---------- editor del disegno ---------- */
+  function toSvg(e) {
+    const svg = $("#mapSvg"), pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: Math.max(0, Math.min(300, p.x)), y: Math.max(0, Math.min(420, p.y)) };
+  }
+  function resizeTo(o, d, p) {
+    const x = p.gx ? p.x : sn(p.x), y = p.gy ? p.y : sn(p.y);
+    if (o.k === "zip") { o.x = d.fx; o.y = d.fy; o.w = x - d.fx; o.h = y - d.fy; return; }
+    const min = UI.sel === "body" ? 40 : 12; let dx = x - d.fx, dy = y - d.fy;
+    if (Math.abs(dx) < min) dx = dx < 0 ? -min : min;
+    if (Math.abs(dy) < min) dy = dy < 0 ? -min : min;
+    o.x = Math.min(d.fx, d.fx + dx); o.w = Math.abs(dx);
+    o.y = Math.min(d.fy, d.fy + dy); o.h = Math.abs(dy);
+  }
+  const host = $("#svgHost");
+  host.addEventListener("pointerdown", (e) => {
+    if (!UI.edit || !$("#mapSvg")) return;
+    const p = toSvg(e), hn = e.target.closest("[data-h]"), o = selObj();
+    if (hn && o) {
+      const h = hn.dataset.h; let fx, fy;
+      if (o.k === "zip") { if (h === "p1") { fx = o.x + o.w; fy = o.y + o.h; } else { fx = o.x; fy = o.y; } }
+      else { fx = h === "tl" || h === "bl" ? o.x + o.w : o.x; fy = h === "tl" || h === "tr" ? o.y + o.h : o.y; }
+      UI.drag = { mode: "resize", fx, fy };
+    } else {
+      const t = e.target.closest("[data-sel]");
+      if (t) {
+        UI.sel = t.dataset.sel; UI.confirmReset = false; UI.confirmBag = false;
+        const g = selObj();
+        UI.drag = g ? { mode: "move", sx: p.x, sy: p.y, ox: g.x, oy: g.y } : null;
+      } else { UI.sel = null; UI.drag = null; }
+      renderMap(); renderEdit();
+    }
+    try { host.setPointerCapture(e.pointerId); } catch (x) {}
+    e.preventDefault();
+  });
+  host.addEventListener("pointermove", (e) => {
+    if (!UI.edit || !UI.drag) return;
+    const o = selObj(); if (!o) return;
+    const p = toSvg(e);
+    if (UI.drag.mode === "move") { o.x = sn(UI.drag.ox + p.x - UI.drag.sx); o.y = sn(UI.drag.oy + p.y - UI.drag.sy); alignMove(o); } else resizeTo(o, UI.drag, alignPoint(p, o));
+    renderMap();
+  });
+  const endDrag = () => { if (UI.drag) { UI.drag = null; UI.guides = null; save(); renderMap(); } };
+  host.addEventListener("pointerup", endDrag);
+  host.addEventListener("pointercancel", endDrag);
+  function addShape(k) {
+    const v = curView(), d = KIND[k];
+    if (v.shapes.length >= 60) return;
+    const cx = v.body ? v.body.x + v.body.w / 2 : 150, cy = v.body ? v.body.y + v.body.h / 2 : 210, off = (v.shapes.length % 5) * 6;
+    const sh = P(k, sn(cx - d.w / 2 + off), sn(cy - d.h / 2 + off), d.w, d.h, k === "pocket" ? { r: 14 } : null);
+    v.shapes.push(sh); UI.sel = sh.id; save(); renderMap(); renderEdit();
+  }
+  $("#editPanel").addEventListener("click", (e) => {
+    const add = e.target.closest("[data-add]"), act = e.target.closest("[data-act]"), col = e.target.closest("[data-color]");
+    let v = curView(); const o = selObj();
+    if (add) { addShape(add.dataset.add); return; }
+    if (col && o) { if (col.dataset.color) o.c = col.dataset.color; else delete o.c; save(); renderMap(); renderEdit(); return; }
+    if (!act) return;
+    const a = act.dataset.act;
+    if (a === "done") { UI.edit = false; UI.sel = null; UI.confirmReset = false; UI.confirmBag = false; renderAll(); return; }
+    if (a === "delbag") { if (!UI.confirmBag) { UI.confirmBag = true; renderEdit(); return; } removeBag(bag().id); return; }
+    if (a === "reset") {
+      if (!UI.confirmReset) { UI.confirmReset = true; renderEdit(); return; }
+      v = mkViews(bag().type)[S.view]; bag().views[S.view] = v; UI.confirmReset = false; UI.sel = null; save(); renderMap(); renderEdit(); return;
+    }
+    if (a === "center" && o) {
+      if (UI.sel === "body") o.x = sn(150 - o.w / 2);
+      else o.x = Math.round(((v.body ? v.body.x + v.body.w / 2 : 150) - o.w / 2) * 2) / 2;
+      save(); renderMap(); renderEdit(); return;
+    }
+    if (!o || UI.sel === "body") return;
+    const i = v.shapes.indexOf(o);
+    if (a === "dup") { const c = JSON.parse(JSON.stringify(o)); c.id = uid(); c.x += 12; c.y += 12; v.shapes.push(c); UI.sel = c.id; }
+    else if (a === "mirror") {
+      const cx = v.body ? v.body.x + v.body.w / 2 : 150, c = JSON.parse(JSON.stringify(o));
+      c.id = uid();
+      if (o.k === "zip") { c.x = 2 * cx - o.x; c.w = -o.w; } else c.x = 2 * cx - (o.x + o.w);
+      if (c.name) c.name = c.name.replace(/sinistra|destra|sx|dx/gi, (m) => ({ sinistra: "destra", destra: "sinistra", sx: "dx", dx: "sx" })[m.toLowerCase()]);
+      v.shapes.push(c); UI.sel = c.id;
+    }
+    else if (a === "front" && i < v.shapes.length - 1) { v.shapes.splice(i, 1); v.shapes.splice(i + 1, 0, o); }
+    else if (a === "backw" && i > 0) { v.shapes.splice(i, 1); v.shapes.splice(i - 1, 0, o); }
+    else if (a === "del") { v.shapes.splice(i, 1); UI.sel = null; }
+    save(); renderMap(); renderEdit();
+  });
+  $("#editPanel").addEventListener("input", (e) => {
+    const o = selObj(), p = e.target.dataset.prop; if (!o || !p) return;
+    if (p === "name") o.name = e.target.value.slice(0, 40);
+    else if (p === "color") o.c = e.target.value;
+    else if (p === "r" || p === "rt" || p === "rb") o[p] = +e.target.value;
+    save(); renderMap();
+  });
+  $("#editPanel").addEventListener("change", (e) => {
+    const o = selObj();
+    if (e.target.dataset.prop === "color") { renderEdit(); return; }
+    const t = e.target.dataset.tg;
+    if (t === "grid") { UI.grid = e.target.checked; renderMap(); return; }
+    if (!o || !t) return;
+    if (t === "zip") o.zip = e.target.checked; else o.st = e.target.checked;
+    save(); renderMap();
+  });
+  $("#editDraw").addEventListener("click", () => { UI.edit = true; UI.sel = null; UI.placing = null; renderAll(); });
+
+  /* ---------- eventi mappa ---------- */
+  $("#chips").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-bag]");
+    if (c) { useBag(c.dataset.bag); save(); renderAll(); return; }
+    if (e.target.closest("#chipPlus")) { UI.screen = "bags"; renderAll(); $("#newName").focus(); }
+  });
+  $("#tabs").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-view]"); if (!t) return;
+    const nv = t.dataset.view;
+    if (use3d() && (nv === "front" || nv === "back") && nv !== S.view) { settle(nv === "back" ? 180 : 0); return; }
+    S.view = nv; UI.placing = null; UI.sel = null; UI.confirmReset = false; save(); renderAll();
+    const hh = $("#svgHost"); hh.classList.remove("swap"); void hh.offsetWidth; hh.classList.add("swap");
+  });
+  $("#alerts").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-al]"); if (!b) return;
+    const a = b.dataset.al, bg = bag();
+    if (a === "over") { openLoad(); return; }
+    if (a === "allin") { bg.zones.forEach((z) => z.items.forEach((i) => setIn(bg, z, i, true))); save(); renderAll(); return; }
+    const l = a === "out" ? outItems(bg) : a === "ess" ? outItems(bg).filter((x) => x.item.ess) : checkItems(bg); if (!l.length) return;
+    S.view = l[0].zone.view; save(); renderAll(); openZone(l[0].zone.id);
+  });
+  $("#load").addEventListener("click", openLoad);
+  $("#limInput").addEventListener("input", function () {
+    const v = parseFloat(this.value.replace(",", ".")); if (!isFinite(v) || v < 0.5) return;
+    bag().limit = Math.min(60, v); save(); renderLoadTop(); renderMeta();
+  });
+  $("#lsBrk").addEventListener("click", (e) => { const b = e.target.closest("[data-zone]"); if (!b) return; const f = findZone(b.dataset.zone); if (!f) return; S.view = f.zone.view; closeAll(); openZone(f.zone.id); });
+  $("#addZone").addEventListener("click", () => { UI.placing = { id: null }; renderMap(); });
+  $("#cancelPlace").addEventListener("click", () => { UI.placing = null; renderMap(); });
+  $("#stage").addEventListener("click", (e) => {
+    if (UI.noclick) return;
+    if (UI.edit) return;
+    if (e.target.closest("#hint") || e.target.closest(".fab")) return;
+    const svg = $("#mapSvg");
+    if (UI.placing && svg) {
+      const p = toSvg(e); let x = Math.round(Math.max(24, Math.min(276, p.x))), y = Math.round(Math.max(24, Math.min(380, p.y))), nm = "Nuovo scomparto";
+      const t = e.target.closest("[data-sel]");
+      if (t && t.dataset.sel !== "body") {
+        const sh = curView().shapes.filter((s) => s.id === t.dataset.sel)[0];
+        if (sh) { x = Math.round(sh.x + sh.w / 2); y = Math.round(sh.y + sh.h / 2); nm = sh.name || KIND[sh.k].label; }
+      }
+      const pl = UI.placing; UI.placing = null;
+      if (pl.id) { const f = findZone(pl.id); if (f) { f.zone.x = x; f.zone.y = y; } save(); renderMap(); openZone(pl.id); }
+      else { const z = { id: uid(), name: nm, view: S.view, x, y, icon: "", items: [] }; bag().zones.push(z); save(); renderMap(); openZone(z.id, true); }
+      return;
+    }
+    const g = e.target.closest("[data-zone]"); if (g) openZone(g.dataset.zone);
+  });
+  $("#stage").addEventListener("keydown", (e) => {
+    if (UI.edit || (e.key !== "Enter" && e.key !== " ")) return;
+    const g = e.target.closest("[data-zone]"); if (g) { e.preventDefault(); openZone(g.dataset.zone); }
+  });
+  $("#clearEx").addEventListener("click", () => {
+    S.bags.forEach((b) => b.zones.forEach((z) => { z.items = z.items.filter((i) => !i.ex); }));
+    S.examples = false; save(); renderAll();
+  });
+  $("#nav").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-s]"); if (!b) return;
+    UI.screen = b.dataset.s; UI.placing = null; renderAll();
+    if (UI.screen === "search") $("#q").focus();
+  });
+
+  /* ---------- scheda scomparto: eventi ---------- */
+  $("#zoneName").addEventListener("input", function () {
+    const f = findZone(UI.sheetId); if (!f) return;
+    f.zone.name = this.value.slice(0, 40); save(); renderMap();
+  });
+  document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeAll));
+  $("#scrim").addEventListener("click", closeAll);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && UI.open) closeAll(); });
+  $("#iconBtn").addEventListener("click", () => { const p = $("#styleWrap"); p.hidden = !p.hidden; });
+  $("#colorRow").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-zc]"), f = findZone(UI.sheetId); if (!b || !f) return;
+    if (b.dataset.zc) f.zone.color = b.dataset.zc; else delete f.zone.color;
+    save(); renderZoneHead(); renderMap();
+  });
+  $("#lblToggle").addEventListener("change", function () {
+    const f = findZone(UI.sheetId); if (!f) return;
+    if (this.checked) delete f.zone.nolbl; else f.zone.nolbl = true;
+    save(); renderMap();
+  });
+  $("#iconPick").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-icon]"), f = findZone(UI.sheetId); if (!b || !f) return;
+    f.zone.icon = b.dataset.icon; save(); renderZoneHead(); renderMap();
+  });
+  const list = $("#itemList");
+  function afterItemChange() { save(); renderMap(); renderMeta(); const f = findZone(UI.sheetId); if (f) { const w = zoneW(f.zone), vn = VIEWS.filter((v) => v.id === f.zone.view)[0].name; $("#zoneSub").textContent = f.bag.name + " · " + vn + " · " + f.zone.items.length + (f.zone.items.length === 1 ? " oggetto" : " oggetti") + (w ? " · " + fmtW(w) : ""); } }
+  list.addEventListener("click", (e) => {
+    const f = findZone(UI.sheetId); if (!f) return;
+    const z = f.zone, t = e.target.closest("[data-tick]"), ed = e.target.closest("[data-edit]"), q = e.target.closest("[data-qty]"), a = e.target.closest("[data-act]");
+    if (t) { z.items.forEach((i) => { if (i.id === t.dataset.tick) setIn(f.bag, z, i, i.in === false); }); UI.pop = t.dataset.tick; save(); renderItems(); UI.pop = null; renderMap(); renderMeta(); return; }
+    if (ed) { UI.editItem = UI.editItem === ed.dataset.edit ? null : ed.dataset.edit; renderItems(); return; }
+    if (q) {
+      const it = z.items.filter((i) => i.id === UI.editItem)[0]; if (!it) return;
+      it.qty = Math.max(1, Math.min(99, (it.qty || 1) + (+q.dataset.qty))); renderItems(); afterItemChange(); return;
+    }
+    if (a) {
+      const it = z.items.filter((i) => i.id === UI.editItem)[0];
+      if (a.dataset.act === "closeitem") { UI.editItem = null; renderItems(); }
+      else if (a.dataset.act === "checked" && it) { it.chk = ymd(new Date()); renderItems(); afterItemChange(); }
+      else if (a.dataset.act === "delitem" && it) { z.items = z.items.filter((i) => i !== it); UI.editItem = null; renderItems(); afterItemChange(); }
+    }
+  });
+  function onItemField(e) {
+    const fld = e.target.dataset.f; if (!fld) return;
+    const f = findZone(UI.sheetId); if (!f) return;
+    const it = f.zone.items.filter((i) => i.id === UI.editItem)[0]; if (!it) return;
+    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    if (fld === "text") it.text = String(v).slice(0, 60);
+    else if (fld === "qty") it.qty = Math.max(1, Math.min(99, Math.round(parseFloat(v)) || 1));
+    else if (fld === "w") { const w = parseFloat(String(v).replace(",", ".")); if (w > 0) it.w = Math.min(100000, Math.round(w)); else delete it.w; }
+    else if (fld === "note") { if (String(v).trim()) it.note = String(v).slice(0, 120); else delete it.note; }
+    else if (fld === "exp") { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) it.exp = v; else delete it.exp; }
+    else if (fld === "low") { if (v) it.low = true; else delete it.low; }
+    else if (fld === "tmp") { if (v) it.tmp = true; else delete it.tmp; }
+    else if (fld === "every") { const n = Math.round(parseFloat(v)); if (n > 0) { it.every = Math.min(3650, n); if (!it.chk) it.chk = ymd(new Date()); } else { delete it.every; delete it.chk; } if (e.type === "change") { renderItems(); afterItemChange(); return; } }
+    else if (fld === "ess") { if (v) it.ess = true; else delete it.ess; renderItems(); }
+    const btn = list.querySelector('[data-edit="' + it.id + '"]'); if (btn) btn.innerHTML = labelHtml(it);
+    afterItemChange();
+  }
+  list.addEventListener("input", onItemField);
+  list.addEventListener("change", onItemField);
+  list.addEventListener("pointerdown", (e) => {
+    const g = e.target.closest("[data-grip]"); if (!g) return;
+    const li = g.closest("li"); UI.dnd = { id: li.dataset.id }; UI.editItem = null;
+    try { list.setPointerCapture(e.pointerId); } catch (x) {}
+    renderItems(); e.preventDefault();
+  });
+  list.addEventListener("pointermove", (e) => {
+    if (!UI.dnd) return;
+    const f = findZone(UI.sheetId); if (!f) return;
+    const arr = f.zone.items, cur = arr.findIndex((i) => i.id === UI.dnd.id); if (cur < 0) return;
+    const others = [...list.children].filter((l) => l.dataset.id !== UI.dnd.id);
+    const idx = others.filter((l) => { const r = l.getBoundingClientRect(); return e.clientY > r.top + r.height / 2; }).length;
+    if (idx !== cur) { const [it] = arr.splice(cur, 1); arr.splice(idx, 0, it); renderItems(); }
+  });
+  const endDnd = () => { if (UI.dnd) { UI.dnd = null; save(); renderItems(); } };
+  list.addEventListener("pointerup", endDnd);
+  list.addEventListener("pointercancel", endDnd);
+  $("#addForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = findZone(UI.sheetId); if (!f) return;
+    const inp = $("#itemInput");
+    inp.value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean).forEach((s) => {
+      const p = parseQuick(s); if (!p.text) return;
+      const it = { id: uid(), text: p.text, in: true, qty: p.qty }; if (p.w) it.w = p.w;
+      f.zone.items.push(it); bumpFreq(p.text, p.w);
+    });
+    inp.value = ""; save(); renderItems(); renderMap(); renderMeta(); inp.focus(); list.scrollTop = list.scrollHeight;
+  });
+  $("#moveDot").addEventListener("click", () => {
+    const id = UI.sheetId, f = findZone(id); if (!f) return;
+    S.bagId = f.bag.id; S.view = f.zone.view;
+    closeAll(); UI.placing = { id }; renderAll();
+  });
+  $("#delZone").addEventListener("click", function () {
+    if (!UI.confirmDel) { UI.confirmDel = true; this.textContent = "Conferma eliminazione"; const me = this; setTimeout(() => { UI.confirmDel = false; me.textContent = "Elimina segnalino"; }, 3500); return; }
+    const f = findZone(UI.sheetId); if (!f) return;
+    f.bag.zones = f.bag.zones.filter((z) => z.id !== f.zone.id);
+    UI.confirmDel = false; closeAll();
+  });
+
+  /* ---------- cerca, prepara, borse ---------- */
+  $("#q").addEventListener("input", function () { UI.q = this.value; renderSearch(); });
+  $("#results").addEventListener("click", (e) => {
+    const r = e.target.closest("[data-zone]"); if (!r) return;
+    const f = findZone(r.dataset.zone); if (!f) return;
+    useBag(f.bag.id); S.view = f.zone.view; UI.screen = "map"; save(); renderAll(); openZone(f.zone.id);
+  });
+  $("#prepBody").addEventListener("click", (e) => {
+    const L = curList();
+    const ch = e.target.closest("[data-list]"), plus = e.target.closest("#listPlus"), tk = e.target.closest("[data-ptick]"), go = e.target.closest("[data-goto]"), pa = e.target.closest("[data-padd]"), pd = e.target.closest("[data-pdel]"), pb = e.target.closest("button[data-p]");
+    if (ch) { S.listId = ch.dataset.list; UI.listEdit = false; UI.confirmList = false; save(); renderPrep(); return; }
+    if (plus) { const l = { id: uid(), name: "Nuova lista", items: [] }; S.lists.push(l); S.listId = l.id; UI.listEdit = true; save(); renderPrep(); return; }
+    if (!L) return;
+    if (tk) { L.items.forEach((i) => { if (i.id === tk.dataset.ptick) i.done = !i.done; }); save(); renderPrep(); return; }
+    if (go) { const f = findZone(go.dataset.goto); if (!f) return; S.bagId = f.bag.id; S.view = f.zone.view; UI.screen = "map"; save(); renderAll(); openZone(f.zone.id); return; }
+    if (pa) { const it = L.items.filter((i) => i.id === pa.dataset.padd)[0]; if (it) openPick(it.text); return; }
+    if (pd) { L.items = L.items.filter((i) => i.id !== pd.dataset.pdel); save(); renderPrep(); return; }
+    if (pb) {
+      const a = pb.dataset.p;
+      if (a === "reset") { L.items.forEach((i) => { i.done = false; }); save(); renderPrep(); }
+      else if (a === "edit") { UI.listEdit = !UI.listEdit; UI.confirmList = false; renderPrep(); }
+      else if (a === "dellist") {
+        if (!UI.confirmList) { UI.confirmList = true; renderPrep(); return; }
+        S.lists = S.lists.filter((l) => l !== L); S.listId = S.lists[0] ? S.lists[0].id : null; UI.listEdit = false; UI.confirmList = false; save(); renderPrep();
+      }
+    }
+  });
+  $("#prepBody").addEventListener("input", (e) => {
+    const L = curList(); if (!L || e.target.dataset.p !== "rename") return;
+    L.name = e.target.value.slice(0, 40) || L.name; save();
+    const c = document.querySelector('#listChips [data-list="' + L.id + '"]'); if (c) c.textContent = L.name;
+  });
+  $("#prepBody").addEventListener("submit", (e) => {
+    if (e.target.id !== "plAdd") return;
+    e.preventDefault();
+    const L = curList(), inp = $("#plInput"); if (!L) return;
+    inp.value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean).forEach((t) => L.items.push({ id: uid(), text: t.slice(0, 60), done: false }));
+    save(); renderPrep(); const n = $("#plInput"); if (n) n.focus();
+  });
+  $("#pickList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pz]"); if (!b) return;
+    const f = findZone(b.dataset.pz); if (!f) return;
+    f.zone.items.push({ id: uid(), text: UI.pickText.slice(0, 60), in: true, qty: 1 }); bumpFreq(UI.pickText);
+    closeAll();
+  });
+  $("#bagList").addEventListener("click", (e) => {
+    const o = e.target.closest("[data-open]"), d = e.target.closest("[data-delbag]"), s = e.target.closest("[data-share]"), dp = e.target.closest("[data-dup]"), cd = e.target.closest("[data-code]");
+    if (dp) { dupBag(dp.dataset.dup); return; }
+    if (cd) { shareCode(cd.dataset.code); return; }
+    if (o) { useBag(o.dataset.open); S.view = "front"; UI.screen = "map"; save(); renderAll(); return; }
+    if (s) { shareList(s.dataset.share); return; }
+    if (d) {
+      if (UI.confirmDel !== d.dataset.delbag) { UI.confirmDel = d.dataset.delbag; renderBags(); return; }
+      removeBag(d.dataset.delbag);
+    }
+  });
+  $("#bagList").addEventListener("change", (e) => {
+    const r = e.target.closest("[data-ren]"); if (!r) return;
+    const b = S.bags.filter((x) => x.id === r.dataset.ren)[0];
+    if (b) { b.name = r.value.trim() || b.name; save(); renderChips(); renderBags(); }
+  });
+  $("#tpls").addEventListener("click", (e) => { const t = e.target.closest("[data-tpl]"); if (!t) return; UI.tpl = t.dataset.tpl; renderBags(); });
+  $("#themeSeg").addEventListener("click", (e) => { const t = e.target.closest("[data-theme]"); if (!t) return; S.theme = t.dataset.theme; applyTheme(); save(); renderBags(); });
+  $("#btnExport").addEventListener("click", exportBackup);
+  $("#btnImport").addEventListener("click", openImport);
+  $("#newBag").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("#newName").value.trim() || "Nuova " + TPL_LABEL[UI.tpl].toLowerCase();
+    const b = mkBag(name.slice(0, 40), UI.tpl, false);
+    S.bags.push(b); S.bagId = b.id; S.view = "front"; UI.screen = "map"; UI.edit = true; UI.sel = null;
+    $("#newName").value = ""; save(); renderAll();
+  });
+
+  /* ---------- guide e griglia nel disegno ---------- */
+  function gridSvg() {
+    let s = '<g pointer-events="none">';
+    for (let x = 10; x < 300; x += 10) s += '<line class="egrid" x1="' + x + '" y1="0" x2="' + x + '" y2="420"/>';
+    for (let y = 10; y < 420; y += 10) s += '<line class="egrid" x1="0" y1="' + y + '" x2="300" y2="' + y + '"/>';
+    return s + "</g>";
+  }
+  const axisSvg = (v) => { const cx = v.body ? v.body.x + v.body.w / 2 : 150; return '<line class="axis" x1="' + cx + '" y1="0" x2="' + cx + '" y2="420"/>'; };
+  function guideSvg() {
+    const g = UI.guides; if (!g) return "";
+    return g.x.map((x) => '<line class="guide" x1="' + x + '" y1="0" x2="' + x + '" y2="420"/>').join("") + g.y.map((y) => '<line class="guide" x1="0" y1="' + y + '" x2="300" y2="' + y + '"/>').join("");
+  }
+  function candidates(o) {
+    const v = curView(), cx = [150], cy = [210];
+    if (UI.sel !== "body") {
+      if (v.body) { const b = v.body; cx.push(b.x, b.x + b.w / 2, b.x + b.w); cy.push(b.y, b.y + b.h / 2, b.y + b.h); }
+      v.shapes.forEach((s) => { if (s !== o) { cx.push(s.x, s.x + s.w / 2, s.x + s.w); cy.push(s.y, s.y + s.h / 2, s.y + s.h); } });
+    }
+    return { cx, cy };
+  }
+  function nearest(vals, cs, th) {
+    let best = null;
+    vals.forEach((v) => cs.forEach((c) => { const d = c - v; if (Math.abs(d) <= th && (best === null || Math.abs(d) < Math.abs(best))) best = d; }));
+    return best;
+  }
+  const hits = (vals, cs) => { const r = []; cs.forEach((c) => { if (vals.some((v) => Math.abs(v - c) < 0.01) && r.indexOf(c) < 0) r.push(c); }); return r; };
+  function alignMove(o) {
+    const c = candidates(o), th = 4;
+    const dx = nearest([o.x, o.x + o.w / 2, o.x + o.w], c.cx, th), dy = nearest([o.y, o.y + o.h / 2, o.y + o.h], c.cy, th);
+    if (dx !== null) o.x += dx;
+    if (dy !== null) o.y += dy;
+    UI.guides = { x: hits([o.x, o.x + o.w / 2, o.x + o.w], c.cx), y: hits([o.y, o.y + o.h / 2, o.y + o.h], c.cy) };
+  }
+  function alignPoint(p, o) {
+    const c = candidates(o), r = { x: p.x, y: p.y, gx: false, gy: false }, g = { x: [], y: [] };
+    const dx = nearest([p.x], c.cx, 4), dy = nearest([p.y], c.cy, 4);
+    if (dx !== null) { r.x = p.x + dx; r.gx = true; g.x.push(r.x); }
+    if (dy !== null) { r.y = p.y + dy; r.gy = true; g.y.push(r.y); }
+    UI.guides = g;
+    return r;
+  }
+
+  /* ---------- schermata "Esco" ---------- */
+  const TICK = '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  const viewName = (id) => VIEWS.filter((v) => v.id === id)[0].name;
+  function renderEsc() {
+    const el = $("#escBody");
+    if (!S.bags.length) { el.innerHTML = '<div class="empty">Crea prima una borsa dalla scheda Borse.</div>'; return; }
+    const b = bag(), all = [];
+    b.zones.forEach((z) => z.items.forEach((it) => all.push({ z, it })));
+    const ess = all.filter((r) => r.it.ess).sort((a, c) => (a.it.in === false ? 0 : 1) - (c.it.in === false ? 0 : 1));
+    const miss = ess.filter((r) => r.it.in === false), others = all.filter((r) => !r.it.ess && r.it.in === false);
+    const row = (r) => '<div class="qrow' + (r.it.in === false ? " out" : "") + (UI.pop === r.it.id ? " pop" : "") + '"><button class="tick" data-ez="' + r.z.id + '" data-ei="' + r.it.id + '" aria-pressed="' + (r.it.in !== false) + '" aria-label="Preso: ' + esc(r.it.text) + '">' + TICK + '</button><div class="grow"><div class="t">' + ((r.it.qty || 1) > 1 ? r.it.qty + "× " : "") + esc(r.it.text) + '</div><button class="locb" data-goto="' + r.z.id + '">' + esc(r.z.name) + " · " + viewName(r.z.view) + (r.it.in === false ? " · fuori" : "") + "</button></div></div>";
+    let h = '<h2>Prima di uscire</h2><div class="chips">' + S.bags.map((x) => '<button class="chip" data-ebag="' + x.id + '" aria-pressed="' + (x.id === b.id) + '">' + esc(x.name) + "</button>").join("") + "</div>";
+    if (!ess.length) h += '<div class="qs"><div class="qn">Nessun essenziale</div><div class="tiny">Apri un oggetto sulla mappa e attiva «★ Essenziale»: chiavi, portafoglio, telefono. Qui li controlli in un colpo solo e, se restano fuori, diventano rossi.</div></div>';
+    else {
+      h += '<div class="qs ' + (miss.length ? "bad" : "ok") + '"><div class="qn">' + (miss.length ? (miss.length === 1 ? "Manca 1 essenziale" : "Mancano " + miss.length + " essenziali") : "Hai tutto, puoi uscire") + '</div><div class="tiny">' + (ess.length - miss.length) + " su " + ess.length + " essenziali sono in " + esc(b.name) + "</div></div>";
+      h += '<div class="tiny">Essenziali</div>' + ess.map(row).join("");
+    }
+    if (others.length) h += '<div class="tiny">Altri oggetti fuori dalla borsa</div>' + others.map(row).join("");
+    if (miss.length || others.length) h += '<button class="btn primary" data-eall="1">Rimetti tutto in borsa</button>';
+    el.innerHTML = h;
+  }
+  $("#escBody").addEventListener("click", (e) => {
+    const tk = e.target.closest("[data-ez]"), ch = e.target.closest("[data-ebag]"), go = e.target.closest("[data-goto]"), al = e.target.closest("[data-eall]");
+    if (ch) { useBag(ch.dataset.ebag); save(); renderEsc(); return; }
+    if (tk) { const f = findZone(tk.dataset.ez); if (f) f.zone.items.forEach((i) => { if (i.id === tk.dataset.ei) setIn(f.bag, f.zone, i, i.in === false); }); UI.pop = tk.dataset.ei; save(); renderEsc(); UI.pop = null; return; }
+    if (go) { const f = findZone(go.dataset.goto); if (!f) return; useBag(f.bag.id); S.view = f.zone.view; UI.screen = "map"; save(); renderAll(); openZone(f.zone.id); return; }
+    if (al) { const b = bag(); b.zones.forEach((z) => z.items.forEach((i) => setIn(b, z, i, true))); save(); renderEsc(); }
+  });
+
+  /* ---------- cruscotto e storico ---------- */
+  function ago(t) {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return "ora";
+    if (m < 60) return m + " min fa";
+    const h = Math.round(m / 60); if (h < 24) return h + " h fa";
+    const d = Math.round(h / 24); return d + (d === 1 ? " giorno fa" : " giorni fa");
+  }
+  function renderDash() {
+    const el = $("#dashCard"), lg = $("#logCard");
+    if (!S.bags.length) { el.hidden = true; lg.hidden = true; return; }
+    el.hidden = false; lg.hidden = false;
+    let tin = 0, tout = 0, zs = 0, pk = 0, w = 0;
+    S.bags.forEach((b) => {
+      zs += b.zones.length; w += bagW(b);
+      Object.keys(b.views).forEach((k) => b.views[k].shapes.forEach((s) => { if (s.k === "pocket") pk++; }));
+      b.zones.forEach((z) => z.items.forEach((i) => { if (i.in === false) tout++; else tin++; }));
+    });
+    const tot = tin + tout, pct = tot ? Math.round((tin / tot) * 100) : 0, C = 2 * Math.PI * 40, arc = tot ? (C * tin) / tot : 0;
+    const byUse = S.bags.slice().sort((a, c) => (c.uses || 0) - (a.uses || 0)), max = byUse[0].uses || 0;
+    const stat = (v, l) => '<div class="stat"><b>' + v + "</b><span>" + l + "</span></div>";
+    let h = "<h3>Cruscotto</h3>";
+    h += '<div class="dash"><svg viewBox="0 0 100 100" role="img" aria-label="' + pct + '% degli oggetti è in borsa"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--line)" stroke-width="12"/>' + (tot ? '<circle cx="50" cy="50" r="40" fill="none" stroke="var(--dot)" stroke-width="12" stroke-dasharray="' + arc.toFixed(1) + " " + (C - arc).toFixed(1) + '" transform="rotate(-90 50 50)"/>' : "") + '<text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" style="fill:var(--fg)">' + pct + '%</text></svg>';
+    h += '<div class="stats">' + stat(tin, "oggetti in borsa") + stat(tout, "oggetti fuori") + stat(pk, "tasche disegnate") + stat(zs, "segnalini") + "</div></div>";
+    h += '<p class="tiny">' + tot + (tot === 1 ? " oggetto" : " oggetti") + " in totale · " + fmtW(w) + " nelle borse</p>";
+    h += '<div class="tiny">' + (max ? "Borsa più usata: " + esc(byUse[0].name) : "Usa le borse per vedere quella più usata") + "</div>";
+    if (max) h += byUse.slice(0, 5).map((b) => '<div class="brow"><span>' + esc(b.name) + "</span><b>" + (b.uses || 0) + (b.uses === 1 ? " uso" : " usi") + '</b><div class="bar"><i style="width:' + Math.round(((b.uses || 0) / max) * 100) + '%"></i></div></div>').join("");
+    el.innerHTML = h;
+    const L = S.log.filter((g) => !UI.logEss || g.e).slice(0, 10);
+    let g = "<h3>Ultimi spostamenti</h3>";
+    g += '<div class="seg two" id="logSeg"><button data-lf="all" aria-pressed="' + !UI.logEss + '">Tutti</button><button data-lf="ess" aria-pressed="' + UI.logEss + '">★ Essenziali</button></div>';
+    g += L.length ? '<ul class="logl">' + L.map((x) => '<li><span class="a-' + x.a + '">' + (x.a === "in" ? "DENTRO" : "FUORI") + "</span><span>" + (x.e ? '<b style="color:var(--danger)">★</b> ' : "") + esc(x.x) + ' <small style="color:var(--muted)">· ' + esc(x.z) + '</small></span><span class="when">' + ago(x.t) + "</span></li>").join("") + "</ul>" : '<div class="tiny">' + (UI.logEss ? "Nessun movimento degli essenziali." : "Quando togli o rimetti un oggetto dalla borsa, lo vedi qui.") + "</div>";
+    if (S.log.length) g += '<div class="acts"><button class="btn sm danger" data-logclear="1">' + (UI.confirmLog ? "Conferma: svuota storico" : "Svuota storico") + "</button></div>";
+    lg.innerHTML = g;
+  }
+  $("#logCard").addEventListener("click", (e) => {
+    const f = e.target.closest("[data-lf]"), c = e.target.closest("[data-logclear]");
+    if (f) { UI.logEss = f.dataset.lf === "ess"; UI.confirmLog = false; renderDash(); return; }
+    if (c) { if (!UI.confirmLog) { UI.confirmLog = true; renderDash(); return; } S.log = []; UI.confirmLog = false; save(); renderDash(); }
+  });
+
+  /* ---------- suggerimenti ---------- */
+  const DEFAULT_SUG = ["Chiavi", "Portafoglio", "Cellulare", "Caricatore", "Powerbank", "Cuffie", "Fazzoletti", "Occhiali", "Documenti", "Bottiglia d'acqua", "Penna", "Mascherina"];
+  function suggest(q, excl, withDefaults, max) {
+    const n = norm(q), seen = new Set(excl), out = [];
+    const hist = Object.keys(S.freq).map((k) => S.freq[k]).sort((a, c) => (n ? (norm(a.t).indexOf(n) === 0 ? 0 : 1) - (norm(c.t).indexOf(n) === 0 ? 0 : 1) : 0) || c.n - a.n);
+    const push = (t, w) => { const k = norm(t); if (!k || seen.has(k) || (n && k.indexOf(n) < 0)) return; seen.add(k); out.push({ t, w }); };
+    hist.forEach((e) => push(e.t, e.w));
+    if (withDefaults) DEFAULT_SUG.forEach((t) => push(t));
+    return out.slice(0, max);
+  }
+  function renderSug() {
+    const el = $("#sugRow"), f = findZone(UI.sheetId);
+    if (!f) { el.hidden = true; UI.sug = []; return; }
+    const seg = $("#itemInput").value.split(/[,\n]/).pop(), q = parseQuick(seg).text;
+    UI.sug = suggest(q, f.zone.items.map((i) => norm(i.text)), true, 8);
+    el.hidden = !UI.sug.length;
+    el.innerHTML = UI.sug.map((s, i) => '<button type="button" data-sg="' + i + '">+ ' + esc(s.t) + "</button>").join("");
+  }
+  $("#itemInput").addEventListener("input", renderSug);
+  $("#sugRow").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-sg]"), f = findZone(UI.sheetId), s = b && UI.sug[+b.dataset.sg];
+    if (!s || !f) return;
+    const inp = $("#itemInput"), parts = inp.value.split(/[,\n]/), last = parseQuick(parts.pop()), w = last.w || s.w || 0;
+    const it = { id: uid(), text: s.t, in: true, qty: last.qty }; if (w) it.w = w;
+    f.zone.items.push(it); bumpFreq(s.t, w);
+    inp.value = parts.map((x) => x.trim()).filter(Boolean).join(", ");
+    save(); renderItems(); renderMap(); renderMeta(); list.scrollTop = list.scrollHeight;
+  });
+  function renderQSug() {
+    const el = $("#qSug"), l = suggest(UI.q.trim(), [norm(UI.q)], false, 8);
+    el.hidden = !l.length;
+    el.innerHTML = l.map((s) => '<button type="button" data-qs="' + esc(s.t) + '">' + esc(s.t) + "</button>").join("");
+  }
+  $("#qSug").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-qs]"); if (!b) return;
+    UI.q = b.dataset.qs; $("#q").value = UI.q; renderSearch();
+  });
+
+  /* ---------- esporta immagine ---------- */
+  const SHOT_PROPS = ["fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "opacity", "fill-opacity", "stroke-opacity", "font-size", "font-weight", "text-anchor", "dominant-baseline", "paint-order", "stop-color", "stop-opacity"];
+  function standaloneSvg(withZones) {
+    const live = $("#mapSvg"), clone = live.cloneNode(true), a = live.querySelectorAll("*"), c = clone.querySelectorAll("*"), drop = [];
+    for (let i = 0; i < a.length; i++) {
+      const cl = a[i].classList, cs = getComputedStyle(a[i]);
+      if (cl.contains("pulse") || cl.contains("selbox") || cl.contains("hnd") || cl.contains("guide") || cl.contains("axis") || cl.contains("egrid") || (!withZones && cl.contains("zone"))) { drop.push(c[i]); continue; }
+      let st = "";
+      SHOT_PROPS.forEach((p) => { const v = cs.getPropertyValue(p); if (v) st += p + ":" + v + ";"; });
+      c[i].setAttribute("style", st); c[i].removeAttribute("class"); c[i].removeAttribute("tabindex");
+    }
+    drop.forEach((n) => { if (n.parentNode) n.parentNode.removeChild(n); });
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg"); clone.setAttribute("viewBox", "0 0 300 420"); clone.setAttribute("width", "300"); clone.setAttribute("height", "420");
+    clone.setAttribute("font-family", "Helvetica, Arial, sans-serif"); clone.removeAttribute("id"); clone.removeAttribute("role");
+    return new XMLSerializer().serializeToString(clone);
+  }
+  function drawShot(withZones) {
+    return new Promise((resolve, reject) => {
+      const b = bag(), root = getComputedStyle(document.documentElement), tok = (n, d) => root.getPropertyValue(n).trim() || d;
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const k = 3, W = 300 * k, H = 420 * k, T = 120, cv = document.createElement("canvas"); cv.width = W; cv.height = H + T;
+          const g = cv.getContext("2d"), bg = g.createLinearGradient(0, 0, 0, H + T);
+          bg.addColorStop(0, tok("--stage1", "#101821")); bg.addColorStop(1, tok("--stage2", "#080b0f"));
+          g.fillStyle = bg; g.fillRect(0, 0, W, H + T);
+          g.fillStyle = tok("--fg", "#e8eef5"); g.font = "700 44px Helvetica, Arial, sans-serif"; g.textBaseline = "alphabetic"; g.fillText(b.name.slice(0, 28), 40, 62);
+          g.fillStyle = tok("--muted", "#8a97a8"); g.font = "500 26px Helvetica, Arial, sans-serif"; g.fillText(viewName(S.view) + " · " + b.zones.filter((z) => z.view === S.view).length + " segnalini", 40, 100);
+          g.drawImage(img, 0, T, W, H);
+          resolve(cv);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = () => reject(new Error("img"));
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(standaloneSvg(withZones));
+    });
+  }
+  function renderImgScope() {
+    $("#imgScope").innerHTML = [["marks", "Con segnalini"], ["plain", "Solo disegno"]].map((t) => '<button data-sc="' + t[0] + '" aria-pressed="' + (UI.imgScope === t[0]) + '">' + t[1] + "</button>").join("");
+  }
+  async function makeShot() {
+    const msg = $("#imgMsg"); msg.textContent = "Creo l'immagine…"; msg.className = "msg"; UI.shot = null;
+    try {
+      const cv = await drawShot(UI.imgScope === "marks");
+      if (!UI.open || UI.open !== "#imgSheet") return;
+      UI.shot = cv; $("#imgPrev").src = cv.toDataURL("image/png");
+      msg.textContent = "Pronta. Scegli il formato qui sotto.";
+    } catch (e) { $("#imgPrev").removeAttribute("src"); msg.textContent = "Non riesco a creare l'immagine su questo dispositivo."; msg.className = "msg over"; }
+  }
+  function openImg() { if (!S.bags.length || !$("#mapSvg")) return; renderImgScope(); $("#imgPrev").removeAttribute("src"); showSheet("#imgSheet"); makeShot(); }
+  async function saveShot(type) {
+    const msg = $("#imgMsg"); if (!UI.shot) return;
+    const dl = await getDl();
+    if (!dl) { msg.textContent = "Il salvataggio non è disponibile qui: tieni premuto sull'anteprima per salvare l'immagine."; msg.className = "msg over"; return; }
+    const blob = await new Promise((r) => { try { UI.shot.toBlob(r, type, 0.92); } catch (e) { r(null); } });
+    if (!blob) { msg.textContent = "Non riesco a preparare il file."; msg.className = "msg over"; return; }
+    const slug = (bag().name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "borsa") + "-" + S.view;
+    try { await dl.save({ filename: slug + (type === "image/png" ? ".png" : ".jpg"), data: blob }); msg.textContent = "Immagine pronta."; msg.className = "msg"; }
+    catch (err) { const dec = err && err.code === "declined"; msg.textContent = dec ? "Salvataggio annullato." : "Non riesco a salvare qui. Tieni premuto sull'anteprima."; msg.className = "msg" + (dec ? "" : " over"); }
+  }
+  $("#shotBtn").addEventListener("click", openImg);
+  $("#imgScope").addEventListener("click", (e) => { const b = e.target.closest("[data-sc]"); if (!b) return; UI.imgScope = b.dataset.sc; renderImgScope(); makeShot(); });
+  $("#imgPng").addEventListener("click", () => saveShot("image/png"));
+  $("#imgJpg").addEventListener("click", () => saveShot("image/jpeg"));
+
+  /* ---------- zoom, trascinamento e vista 3D ---------- */
+  const vbStr = () => UI.z.x + " " + UI.z.y + " " + 300 / UI.z.s + " " + 420 / UI.z.s;
+  function zClamp() { const z = UI.z; z.x = Math.min(300 - 300 / z.s, Math.max(0, z.x)); z.y = Math.min(420 - 420 / z.s, Math.max(0, z.y)); }
+  function zApply() { const sv = $("#mapSvg"); if (sv) sv.setAttribute("viewBox", vbStr()); $("#zoomBtn").hidden = UI.z.s <= 1; }
+  function zoomAt(cx, cy, k) {
+    const z = UI.z, ns = Math.min(6, Math.max(1, z.s * k)); if (ns === z.s) return;
+    z.x = cx - (cx - z.x) * (z.s / ns); z.y = cy - (cy - z.y) * (z.s / ns); z.s = ns; zClamp();
+  }
+  const use3d = () => UI.d3 && !UI.edit && !UI.placing && S.view !== "open" && S.bags.length > 0;
+  function faceSvg(vid, id, style) {
+    const b = bag(), v = b.views[vid];
+    let s = '<svg' + (id ? ' id="' + id + '"' : "") + ' class="face" style="' + style + '" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid meet" role="group" aria-label="' + esc(b.name) + " · " + viewName(vid) + '">' + DEFS;
+    if (v.body) s += bodySvg(v.body);
+    v.shapes.forEach((sh) => { s += shapeSvg(sh); });
+    b.zones.filter((z) => z.view === vid).forEach((z) => { s += zoneSvg(z); });
+    return s + "</svg>";
+  }
+  const D3 = 24, TILT = "rotateX(-7deg) ";
+  function scene3d() {
+    const b = bag(), body = b.views.front.body || b.views.back.body;
+    UI.rot = S.view === "back" ? 180 : 0;
+    let h = '<div class="scene" id="scene"><div class="obj" id="obj" style="transform:' + TILT + "rotateY(" + UI.rot + 'deg)">';
+    if (body) {
+      const d = bodyPath(body.x, body.y, body.w, body.h, body.rt, body.rb);
+      for (let i = -4; i <= 4; i++) h += '<svg class="slice" style="transform:translateZ(' + (i * D3) / 4 + 'px)" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="' + d + '" ' + paint(body.c, "body") + ' stroke-width="2"/></svg>';
+    }
+    h += faceSvg("front", S.view === "front" ? "mapSvg" : "", "transform:translateZ(" + D3 + "px)");
+    h += faceSvg("back", S.view === "back" ? "mapSvg" : "", "transform:rotateY(180deg) translateZ(" + D3 + "px)");
+    return h + "</div></div>";
+  }
+  function settle(t) {
+    const o = $("#obj"); if (!o) return;
+    const back = (((t / 180) % 2) + 2) % 2 === 1;
+    S.view = back ? "back" : "front"; renderTabs();
+    void o.offsetWidth; o.style.transform = TILT + "rotateY(" + t + "deg)";
+    setTimeout(() => { UI.rot = back ? 180 : 0; UI.noclick = false; save(); renderAll(); }, 520);
+  }
+  const zp = new Map(); let zpin = null, zpan = null, rd = null;
+  const mid2 = () => { const a = [...zp.values()]; return { clientX: (a[0].x + a[1].x) / 2, clientY: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1 }; };
+  host.addEventListener("pointerdown", (e) => {
+    if (use3d()) { rd = { id: e.pointerId, x: e.clientX, base: UI.rot, moved: false, cur: UI.rot }; return; }
+    zp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zp.size === 2) { UI.drag = null; zpin = mid2(); zpan = null; UI.noclick = true; }
+    else if (zp.size === 1 && !UI.edit && UI.z.s > 1) zpan = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+  });
+  host.addEventListener("pointermove", (e) => {
+    if (rd && e.pointerId === rd.id) {
+      const dx = e.clientX - rd.x; if (!rd.moved && Math.abs(dx) < 6) return;
+      if (!rd.moved) { rd.moved = true; UI.noclick = true; const sc = $("#scene"); if (sc) sc.classList.add("drag"); try { host.setPointerCapture(e.pointerId); } catch (x) {} }
+      rd.cur = rd.base + dx * 0.6; const o = $("#obj"); if (o) o.style.transform = TILT + "rotateY(" + rd.cur + "deg)";
+      return;
+    }
+    if (!zp.has(e.pointerId) || !$("#mapSvg")) return;
+    zp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zp.size === 2 && zpin) {
+      const m = mid2(), a = toSvg(zpin);
+      zoomAt(a.x, a.y, m.d / zpin.d); zApply();
+      const b = toSvg(m); UI.z.x += a.x - b.x; UI.z.y += a.y - b.y; zClamp(); zApply(); zpin = m; return;
+    }
+    if (zpan && zpan.id === e.pointerId && zp.size === 1) {
+      if (!zpan.moved && Math.hypot(e.clientX - zpan.x, e.clientY - zpan.y) < 6) return;
+      if (!zpan.moved) { zpan.moved = true; UI.noclick = true; try { host.setPointerCapture(e.pointerId); } catch (x) {} }
+      const a = toSvg({ clientX: zpan.x, clientY: zpan.y }), b = toSvg(e);
+      UI.z.x += a.x - b.x; UI.z.y += a.y - b.y; zClamp(); zApply(); zpan.x = e.clientX; zpan.y = e.clientY;
+    }
+  });
+  function zEnd(e) {
+    if (rd && e.pointerId === rd.id) {
+      const r = rd; rd = null;
+      if (r.moved) { const sc = $("#scene"); if (sc) sc.classList.remove("drag"); settle(Math.round(r.cur / 180) * 180); }
+      return;
+    }
+    zp.delete(e.pointerId); if (zp.size < 2) zpin = null;
+    if (zpan && zpan.id === e.pointerId) zpan = null;
+    if (zp.size === 0 && UI.noclick) setTimeout(() => { UI.noclick = false; }, 80);
+  }
+  host.addEventListener("pointerup", zEnd);
+  host.addEventListener("pointercancel", zEnd);
+  host.addEventListener("wheel", (e) => {
+    if (use3d() || !$("#mapSvg")) return;
+    e.preventDefault(); const p = toSvg(e); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.15 : 1 / 1.15); zApply();
+  }, { passive: false });
+  $("#zoomBtn").addEventListener("click", () => { UI.z = { s: 1, x: 0, y: 0 }; zApply(); });
+  $("#d3Btn").addEventListener("click", () => {
+    UI.d3 = !UI.d3; if (UI.d3 && S.view === "open") S.view = "front";
+    UI.z = { s: 1, x: 0, y: 0 }; renderAll();
+  });
+
+  /* ---------- duplica, codice di condivisione ---------- */
+  function reid(b) {
+    b.id = uid();
+    Object.keys(b.views).forEach((k) => b.views[k].shapes.forEach((s) => { s.id = uid(); }));
+    b.zones.forEach((z) => { z.id = uid(); z.items.forEach((i) => { i.id = uid(); }); });
+    return b;
+  }
+  function dupBag(id) {
+    const s = S.bags.filter((b) => b.id === id)[0]; if (!s || S.bags.length >= 30) return;
+    const c = reid(JSON.parse(JSON.stringify(s)));
+    c.name = (s.name + " (copia)").slice(0, 40); c.uses = 0;
+    c.zones.forEach((z) => z.items.forEach((i) => { i.in = true; }));
+    S.bags.splice(S.bags.indexOf(s) + 1, 0, c); S.bagId = c.id;
+    save(); renderAll();
+  }
+  const b64 = (u) => { let s = ""; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const unb64 = (t) => { t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; const s = atob(t), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+  async function pipeBytes(u, Ctor) { const st = new Blob([u]).stream().pipeThrough(new Ctor("deflate-raw")); return new Uint8Array(await new Response(st).arrayBuffer()); }
+  async function encodeBag(b) {
+    const c = JSON.parse(JSON.stringify(b)); delete c.uses; delete c.id;
+    Object.keys(c.views).forEach((k) => c.views[k].shapes.forEach((s) => { delete s.id; }));
+    c.zones.forEach((z) => { delete z.id; z.items.forEach((i) => { delete i.id; delete i.ex; delete i.chk; }); });
+    const u = new TextEncoder().encode(JSON.stringify(c));
+    if (typeof CompressionStream === "function") { try { return "MZ1:" + b64(await pipeBytes(u, CompressionStream)); } catch (e) {} }
+    return "MZ0:" + b64(u);
+  }
+  async function decodeBag(code) {
+    const u = unb64(code.slice(4).replace(/\s+/g, ""));
+    let bytes = u;
+    if (code.slice(0, 4) === "MZ1:") { if (typeof DecompressionStream !== "function") throw new Error("nodec"); bytes = await pipeBytes(u, DecompressionStream); }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  async function shareCode(id) {
+    const b = S.bags.filter((x) => x.id === id)[0]; if (!b) return;
+    const code = await encodeBag(b);
+    openDlg({ title: "Codice di «" + b.name.slice(0, 24) + "»", sub: "Mandalo a un amico: lo incolla in Importa, nella scheda Borse, e riceve la borsa con disegno, segnalini e oggetti. Oppure fagli inquadrare il QR e copiare il testo.", text: code, readonly: true, filename: (b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "borsa") + "-codice.txt", acts: [{ id: "copy", label: "Copia codice", cls: "primary" }, { id: "save", label: "Salva file" }] });
+    const q = $("#dlgQr");
+    if (typeof qrcode === "function" && code.length <= 2300) {
+      try { const qr = qrcode(0, "L"); qr.addData(code); qr.make(); q.innerHTML = qr.createSvgTag(4, 2); q.hidden = false; } catch (e) { q.hidden = true; }
+    } else if (code.length > 2300) dmsg("Il codice è troppo lungo per un QR: copialo come testo.");
+  }
+  async function importCode(txt) {
+    try {
+      const b = cleanBag(await decodeBag(txt)); if (!b) throw new Error("bad");
+      reid(b); b.uses = 0; UI.dlg.pendingBag = b;
+      $("#dlgSub").textContent = "Trovata la borsa «" + b.name + "» con " + b.zones.length + " segnalini e " + b.zones.reduce((a, z) => a + z.items.length, 0) + " oggetti. Vuoi aggiungerla alle tue?";
+      $("#dlgActs").innerHTML = '<button class="btn primary" data-da="confirmcode">Aggiungi borsa</button><button class="btn" data-da="cancel">Annulla</button>';
+      dmsg("");
+    } catch (e) { dmsg("Il codice non è valido o è incompleto.", true); }
+  }
+
+  /* ---------- installazione e offline ---------- */
+  let deferredInstall = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; $("#pwaBtn").hidden = false; });
+  $("#pwaBtn").addEventListener("click", async () => {
+    if (!deferredInstall) return;
+    try { deferredInstall.prompt(); await deferredInstall.userChoice; } catch (e) {}
+    deferredInstall = null; $("#pwaBtn").hidden = true;
+  });
+  try { if ((window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone) $("#pwaCard").hidden = true; } catch (e) {}
+  try { if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {}); } catch (e) {}
+
+  /* righe scorrevoli: rotellina, trascinamento col mouse, posizione mantenuta */
+  const HROWS = ".chips, .alerts, .addrow, .iconpick, .sug";
+  document.addEventListener("wheel", (e) => {
+    const r = e.target.closest && e.target.closest(HROWS);
+    if (!r || r.scrollWidth <= r.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault(); r.scrollLeft += e.deltaY;
+  }, { passive: false });
+  let hd = null;
+  document.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const r = e.target.closest && e.target.closest(HROWS);
+    if (r && r.scrollWidth > r.clientWidth) hd = { r, x: e.clientX, l: r.scrollLeft, moved: false };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!hd) return;
+    const dx = e.clientX - hd.x;
+    if (!hd.moved && Math.abs(dx) < 5) return;
+    hd.moved = true; hd.r.scrollLeft = hd.l - dx;
+  });
+  const hEnd = () => { if (hd && hd.moved) { const m = hd; hd = null; m.r.dataset.dragged = "1"; setTimeout(() => { delete m.r.dataset.dragged; }, 60); } else hd = null; };
+  document.addEventListener("pointerup", hEnd); document.addEventListener("pointercancel", hEnd);
+  document.addEventListener("click", (e) => { const r = e.target.closest && e.target.closest(HROWS); if (r && r.dataset.dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+  function keepRow(id, fn) {
+    return function () {
+      const el = $(id), sl = el ? el.scrollLeft : 0, out = fn.apply(this, arguments), n = $(id);
+      if (!n) return out;
+      n.scrollLeft = sl;
+      const a = n.querySelector('[aria-pressed="true"]');
+      if (a) {
+        if (a.offsetLeft < n.scrollLeft) n.scrollLeft = Math.max(0, a.offsetLeft - 8);
+        else if (a.offsetLeft + a.offsetWidth > n.scrollLeft + n.clientWidth - 64) n.scrollLeft = a.offsetLeft + a.offsetWidth - n.clientWidth + 72;
+      }
+      return out;
+    };
+  }
+  renderPrep = keepRow("#listChips", renderPrep);
+  renderMap = keepRow("#chips", renderMap);
+
+  applyTheme();
+  renderAll();
+  try { const hs = location.hash.slice(1); if (/^MZ[01]:/.test(hs)) { openImport(); $("#dlgText").value = hs; tryImport(); } } catch (e) {}
+})();
+</script>
+
+</html>
